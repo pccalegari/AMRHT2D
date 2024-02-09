@@ -8,8 +8,8 @@ particle::particle(double x, double y, double radius, double velocity, int level
   this->x = x;
   this->y = y;
   this->radius = radius;
-  this->vx = vx;
-  this->vy = vy;
+  //  this->vx = vx;
+  //this->vy = vy;
   this->level = level;
 }
 

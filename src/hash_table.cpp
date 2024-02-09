@@ -72,6 +72,7 @@ unsigned int hash_table::hash_function(int x, int y, int level){
   int diff_level = this->max_level - level;
   int pow_2_diff_level = pow(2, diff_level);
   double ra, kr;
+  
   ra = (sqrt(5) - 1.0)/2.0;
   i = x * pow_2_diff_level; //encontra a abscissa correspondente a x no nível mais fino
   j = y * pow_2_diff_level; //encontra a ordenada correspondente a y no nível mais fino
@@ -80,9 +81,10 @@ unsigned int hash_table::hash_function(int x, int y, int level){
                                              //de cima para baixo (e começando do 0)
   /* Metodo da Divisao */
   index = key % H->size();
+  
   /* Metodo de Fibonacci */
   kr = key*ra;
-  //index = (int)(H->size()*(kr - (int)(kr)));
+  index = (int)(H->size()*(kr - (int)(kr)));
   return index;
 }
 
