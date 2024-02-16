@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cmath>
 #include <ctime>
+
 #include "mesh.h" 
 #include <vector>
 
@@ -30,8 +31,8 @@ static char help[] = "Solve a Poisson 2D!";
 
 int main (int argc, char **args){
 
-  int number_of_levels = 2, nxb = 4, nyb = 4, N = nxb, index;
-
+  int number_of_levels = 1, nxb = 8, nyb = 8, N = nxb;
+  int ncell;
   dominio *D;
   double xbegin, ybegin, xend, yend;
   xbegin = ybegin = 0.0;
@@ -45,7 +46,7 @@ int main (int argc, char **args){
   list <cell *>::iterator it;
   
   KSP ksp;
-  PetscReal norm, x, y, aux;
+  PetscReal norm, aux;
   Vec uexa, u, rhs, r;
   Mat A;
   PetscInt i, j, iglobal, col0[3], col1[4], col2[5];
@@ -94,65 +95,71 @@ int main (int argc, char **args){
   PetscCall(VecDuplicate(rhs, &uexa));
   PetscCall(VecSet(u, 0.0));
 
-  dx = fabs(xend - xbegin) / nxb;
-  dy = fabs(yend - ybegin) / nyb;
-  index = 0;
-  for (int i = 0; i < number_of_levels; i++) {
-    
+  /* Enumeração */
+  ncell = M->counting_mesh_cell();
+  printf("%d\n", ncell);
+
+  for (i = 0; i < number_of_levels; i++) {
     l = M->get_list_cell_by_level(i);
     
     dx = fabs(xend - xbegin) / (nxb * pow(2, i));
     dy = fabs(yend - ybegin) / (nyb * pow(2, i));
     
-    //it = l->begin();
-    for (list <cell *>::iterator it = l->begin(); it != l->end(); it++) {
+    for (list <cell *>::reverse_iterator it = l->rbegin(); it != l->rend(); it++) {
       xd = xbegin + (((*it)->get_cell_x() + 0.5) * dx);
       yd = ybegin + (((*it)->get_cell_y() + 0.5) * dy);
-      (*it)->set_cell_index(index);
-      printf("%d\n", (*it)->get_cell_index()); 
-
-      index++;
-      
-    }
-  }
-  
-  for(j = 0; j < nyb; j++){
-    y = ybegin + (j + 0.5)*dx;
-    for(i = 0; i < nxb; i++){
-      x = xbegin + (i + 0.5)*dy;
-      /*printf("%f %f", x, y);*/
-      iglobal = i + j*nxb;
-      aux = (PetscScalar)(sol_u(x, y));
+      iglobal = (*it)->get_cell_index();
+      aux = (PetscScalar)(sol_u(xd, yd));
       VecSetValues(uexa, 1, &iglobal, &aux, INSERT_VALUES);
-      // Alterar para incluir contorno nao nulo 
-      aux = dx*dy * (PetscScalar)(f_rhs(x, y));
+      aux = dx*dy * (PetscScalar)(f_rhs(xd, yd));
+      //printf("%d %d %f %f\n", (*it)->get_cell_x(), (*it)->get_cell_y(),  xd, yd);
+      //printf("%f %f\n", sol_u(xd,yd), f_rhs(xd, yd));
       VecSetValues(rhs, 1, &iglobal, &aux, INSERT_VALUES);
+      
     }
   }
-  
+
   /* Alteracao do lado direito por causa da variavel no centro da celula */
-     
-   for(j = 0; j < nyb; j++){
-      y = ybegin + (j + 0.5)*dx;
-      // i = 0
-      aux = 2.0 * (PetscScalar)(sol_u(xbegin, y));
-      iglobal = j*nxb;
-      VecSetValues(rhs, 1, &iglobal, &aux, ADD_VALUES);
-      // i = N-1
-      aux = 2.0 * (PetscScalar)(sol_u(xend, y));
-      iglobal = nxb - 1 + j*nxb;
-      VecSetValues(rhs, 1, &iglobal, &aux, ADD_VALUES);
-      // j = 0 
-      aux = 2.0 * (PetscScalar)(sol_u(y, ybegin));
-      iglobal = j;
-      VecSetValues(rhs, 1, &iglobal, &aux, ADD_VALUES);
-      // j = N-1
-      aux = 2.0 * (PetscScalar)(sol_u(y, yend));
-      iglobal = j + (nyb-1)*nxb;
-      VecSetValues(rhs, 1, &iglobal, &aux, ADD_VALUES);
-      
-   }
- 
+  list <cell *> * bcs = M->boundary_cells_south();
+  for(list <cell *>::iterator it = bcs->begin(); it != bcs->end(); it++){
+    int l = (*it)->get_cell_level();
+    dx = fabs(xend - xbegin) / (nxb * pow(2, l));
+    xd = xbegin + ((*it)->get_cell_x() + 0.5)*dx;
+    aux = 2.0 * (PetscScalar)(sol_u(xd, ybegin));
+    iglobal = (*it)->get_cell_index();
+    VecSetValues(rhs, 1, &iglobal, &aux, ADD_VALUES);
+  }
+  
+  list <cell *> * bcn = M->boundary_cells_north();
+  for(list <cell *>::iterator it = bcn->begin(); it != bcn->end(); it++){
+    int l = (*it)->get_cell_level();
+    dx = fabs(xend - xbegin) / (nxb * pow(2, l));
+    xd = xbegin + ((*it)->get_cell_x() + 0.5)*dx;
+    aux = 2.0 * (PetscScalar)(sol_u(xd, yend));
+    iglobal = (*it)->get_cell_index();
+    VecSetValues(rhs, 1, &iglobal, &aux, ADD_VALUES);
+  }
+  
+  list <cell *> * bce = M->boundary_cells_east();
+  for(list <cell *>::iterator it = bce->begin(); it != bce->end(); it++){
+    int l = (*it)->get_cell_level();
+    dy = fabs(yend - ybegin) / (nyb * pow(2, l));
+    yd = ybegin + ((*it)->get_cell_y() + 0.5)*dy;
+    aux = 2.0 * (PetscScalar)(sol_u(xbegin, yd));
+    iglobal = (*it)->get_cell_index();
+    VecSetValues(rhs, 1, &iglobal, &aux, ADD_VALUES);
+  }
+  
+  list <cell *> * bcw = M->boundary_cells_west();
+  for(list <cell *>::iterator it = bcw->begin(); it != bcw->end(); it++){
+    int l = (*it)->get_cell_level();
+    dy = fabs(yend - ybegin) / (nyb * pow(2, l));
+    yd = ybegin + ((*it)->get_cell_y() + 0.5)*dy;
+    aux = 2.0 * (PetscScalar)(sol_u(xend, yd));
+    iglobal = (*it)->get_cell_index();
+    VecSetValues(rhs, 1, &iglobal, &aux, ADD_VALUES);
+  }
+    
    PetscCall(VecAssemblyBegin(uexa));
    PetscCall(VecAssemblyEnd(uexa));
    PetscCall(VecAssemblyBegin(rhs));
@@ -176,7 +183,7 @@ int main (int argc, char **args){
    w2[4] = -1.0;
 
    PetscCall(MatCreate(PETSC_COMM_SELF, &A));
-   PetscCall(MatSetSizes(A, PETSC_DECIDE, PETSC_DECIDE, N*N, N*N));
+   PetscCall(MatSetSizes(A, PETSC_DECIDE, PETSC_DECIDE, ncell, ncell));
    PetscCall(MatSetFromOptions(A));
    PetscCall(MatSetUp(A));
    
