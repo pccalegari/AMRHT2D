@@ -53,6 +53,13 @@ class mesh {
   void calculation_exact_function (double (* f) (double_cell * c));
   void calculation_function (double (* f) (double x, double y), vector <double> * fvalue);
   int counting_mesh_cell();
+  
+  list <cell *> * boundary_cells_south();
+  list <cell *> * boundary_cells_north();
+  list <cell *> * boundary_cells_east();
+  list <cell *> * boundary_cells_west();
+  void print_list(list <cell *> * bc);
+  
   void triangular_mesh(int * ncellp, int * nelemp, int * narep, int * nvertp);
   void triangular_mesh_refined(int * ncellp, int * nelemp, int * narep, int * nvertp);
   int search_left_neighbours(cell * c);
