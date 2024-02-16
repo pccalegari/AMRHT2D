@@ -192,7 +192,7 @@ void mesh::create_unstructured_mesh(double (* f) (double x, double y, double t),
   char palavra [100];
   for (int i = 0; i < 100; i++)
     palavra[0] = '\0';
-  sprintf(palavra,"/home/priscila/Pesquisa/AMRHT2D-master/data/basic%4.3lf.silo", 1 + tempo);
+  sprintf(palavra,"/home/priscila/Documentos/Pesquisa/AMRHT2D-master/data/basic%4.3lf.silo", 1 + tempo);
   
   dbfile = DBCreate(palavra, DB_CLOBBER, DB_LOCAL,"Comment about the data", DB_HDF5);
   if(dbfile == NULL)
@@ -742,6 +742,90 @@ void mesh::insert_neighbour(cell * c, list <cell *> * nb){
   if(ct == nb->size())
     nb->insert(nb->end(), c);
 }
+
+
+/* Células da fronteira */
+list <cell *> * mesh::boundary_cells_south() {
+  int i, j;
+  list <cell *> * bcs = new list <cell*>;
+  for (int k = 0; k < number_of_levels; k++) {
+    for (list <cell *>::iterator it = l->at(k)->begin(); it != l->at(k)->end(); it++) {
+      i = (*it)->get_cell_x();
+      j = (*it)->get_cell_y();
+      cell * c = search(i, j, k);
+     
+      if (c != NULL){
+	if(j == 0){
+	  //c->print_cell();
+	  bcs->insert(bcs->begin(), c);
+	}
+      }
+    }
+  }
+  return bcs;
+}
+
+list <cell *> * mesh::boundary_cells_north() {
+  int i, j;
+  
+  list <cell *> * bcn = new list <cell*>;
+  for (int k = 0; k < number_of_levels; k++) {
+    for (list <cell *>::iterator it = l->at(k)->begin(); it != l->at(k)->end(); it++) {
+      i = (*it)->get_cell_x();
+      j = (*it)->get_cell_y();
+      cell * c = search(i, j, k);
+      if (c != NULL){
+	if(j == pow(2,k)*nyb - 1){
+	  //c->print_cell();
+	  bcn->insert(bcn->begin(), c);
+	}
+      }
+    }
+  }
+  return bcn;
+}
+
+list <cell *> * mesh::boundary_cells_east() {
+  int i, j;
+  list <cell *> * bce = new list <cell*>;
+  for (int k = 0; k < number_of_levels; k++) {
+    for (list <cell *>::iterator it = l->at(k)->begin(); it != l->at(k)->end(); it++) {
+      i = (*it)->get_cell_x();
+      j = (*it)->get_cell_y();
+      cell * c = search(i, j, k);
+      if (c != NULL){
+	if(i == 0)
+	  bce->insert(bce->begin(), c);
+      }
+    }
+  }
+  return bce;
+}
+
+list <cell *> * mesh::boundary_cells_west() {
+  int i, j;
+  
+  list <cell *> * bcw = new list <cell*>;
+  for (int k = 0; k < number_of_levels; k++) {
+    for (list <cell *>::iterator it = l->at(k)->begin(); it != l->at(k)->end(); it++) {
+      i = (*it)->get_cell_x();
+      j = (*it)->get_cell_y();
+      cell * c = search(i, j, k);
+      if (c != NULL){
+	if(i == pow(2,k)*nxb - 1)
+	  bcw->insert(bcw->begin(), c);
+      }
+    }
+  }
+  return bcw;
+}
+
+void mesh::print_list(list <cell *> * bc){
+  for(list <cell *>::iterator it = bc->begin(); it !=bc->end(); it++) 
+    (*it)->print_cell();
+   
+}
+
 
 /* Finite Difference Neighbours */
 
@@ -2262,238 +2346,6 @@ void mesh::rhs_dirichlet_boundary_conditions (double (*f) (double x, double y), 
   }
 } 
  
-/* Uma classe matriz ??? */
-/* coeficientes nao nulo da matriz Diferencas finitas no forma CSR */
-
-void mesh::create_matrix_df (vector<double> * A, vector<int> * JA, vector<int> * IA, int ncell, int ncellv, vector <cell*> * elem) {
-  int cnn; // number of coeficient not zero in matrix
-  unsigned int L, R, U, D;
-  cnn = 0;
-  
-  double dx, dy, dx2, dy2, xbegin, xend, ybegin, yend;
-  int idv, idva, i, j, iv, jv, lv, lva, level, vr, cnnd, ccv;
-  cell * c, *cv, *cva;
-  xbegin = get_dominio()->get_xbegin();
-  ybegin = get_dominio()->get_ybegin();
-  xend = get_dominio()->get_xend();
-  yend = get_dominio()->get_yend();
-  cnnd = 0;
-  
-  for (int k = 0; k < ncell; k++){
-    c = elem->at(k);
-    i = c->get_cell_x();
-    j = c->get_cell_y();
-    level = c->get_cell_level();
-    c = search(i, j, level);
-    dx = fabs(xend - xbegin) / (nxb * pow(2, level));
-    dx2 = dx*dx;
-    dy = fabs(yend - ybegin) / (nyb * pow(2, level));
-    dy2 = dy*dy;
-    IA->at(k) = cnn;  
-    if (c != NULL) {
-      list <cell *> * lnew = neighbours_fd (c);
-      
-      idva = -1;
-      lva = -1;
-      vr = 0;
-      ccv = 0;
-      L = R = U = D = 0;
-      for (list <cell *>::iterator ite = lnew->begin(); ite != lnew->end(); ite++) {
-	cv=(*ite);
-	idv = cv->get_cell_index();
-	iv = cv->get_cell_x();
-	jv = cv->get_cell_y();
-	lv = cv->get_cell_level();
-	if(idva != idv){
-	  if(i == iv)
-	    A->at(cnn) = -1.0/dy2;
-	  else
-	    A->at(cnn) = -1.0/dx2;
-	  if(lv > level){
-	    if((jv == 2*j) || (jv == 2*j+1))
-	      A->at(cnn) = -0.25/dx2;
-	    if((iv == 2*i) || (iv == 2*i+1))
-	      A->at(cnn) = -0.25/dy2;
-	  }
-	  else if(lv < level){
-	    if((i%2 !=0) && (((j%2 == 0) && (iv == (i+1)/2) && (jv == (j+1)/2-1)) || ((j%2 != 0) && (iv == (i+1)/2) && (jv == (j+1)/2)))){ //right
-	      cva = search(iv,jv,lv);
-	      if(cva != NULL){
-		R = 1;
-		A->at(cnn) = -(3.0/16.0)/dx2;
-	      }
-	    }
-	    else if((i%2 != 0) && (((j%2 == 0) && (iv == (i+1)/2) && (jv == (j+1)/2)) || ((j%2 != 0) && (iv == (i+1)/2) && (jv == (j+1)/2-1)))){ //right
-	      cva = search(iv,jv,lv);
-	      if(cva != NULL){
-		A->at(cnn) = -(9.0/16.0)/dx2;
-	      }
-	    }
-	    else if((i%2 == 0) && (((j%2 == 0) && (iv == (i+1)/2-1) && (jv == (j+1)/2-1)) || ((j%2 != 0) && (iv == (i+1)/2-1) && (jv == (j+1)/2)))){ // left
-	      cva = search(iv,jv,lv);
-	      if(cva != NULL){
-		L = 1;
-		A->at(cnn) = -(3.0/16.0)/dx2;
-	      }
-	    }
-	    else if((i%2 == 0) && (((j%2 == 0) && (iv == (i+1)/2-1) && (jv == (j+1)/2)) || ((j%2 != 0) && (iv == (i+1)/2-1) && (jv == (j+1)/2-1)))){ // left
-	      cva = search(iv,jv,lv);
-	      if(cva != NULL){
-		A->at(cnn) = -(9.0/16.0)/dx2;
-	      }
-	    }
-	    else if((j%2 != 0) && (((i%2 == 0) && (iv == (i+1)/2-1) && (jv == (j+1)/2)) || ((i%2 != 0) && (iv == (i+1)/2) && (jv == (j+1)/2)))){ // up
-	      cva = search(iv,jv,lv);
-	      if(cva != NULL){
-		U = 1;
-		A->at(cnn) = -(3.0/16.0)/dy2;
-	      }
-	    }
-	    else if((j%2 != 0) && (((i%2 == 0) && (iv == (i+1)/2) && (jv == (j+1)/2)) || ((i%2 != 0) && (iv == (i+1)/2-1) && (jv == (j+1)/2)))){ // up
-	      cva = search(iv,jv,lv);
-	      if(cva != NULL){
-		A->at(cnn) = -(9.0/16.0)/dy2;
-	      }
-	    }
-	    else if((j%2 == 0) && (((i%2 == 0) && (iv == (i+1)/2-1) && (jv == (j+1)/2-1)) || ((i%2 != 0) && (iv == (i+1)/2) && (jv == (j+1)/2-1)))){ //down
-	      cva = search(iv,jv,lv);
-	      if(cva != NULL){
-		D = 1;
-		A->at(cnn) = -(3.0/16.0)/dy2;
-	      }
-	    }
-	    else if((j%2 == 0) && (((i%2 == 0) && (iv == (i+1)/2) && (jv == (j+1)/2-1)) || ((i%2 != 0) && (iv == (i+1)/2-1) && (jv == (j+1)/2-1)))){ //down
-	      cva = search(iv,jv,lv);
-	      if(cva != NULL){
-		A->at(cnn) = -(9.0/16.0)/dy2;
-	      }
-	    }
-	  }
-	  JA->at(cnn) = idv;
-	  if(idv == k){
-	    A->at(cnn) = 2.0/dx2 + 2.0/dy2;
-	    JA->at(cnn) = k;
-	    if(i == 0 || i == pow(2,level)*nxb - 1)
-	      A->at(cnn) += 1.0/dx2;
-	    if(j == 0 || j == pow(2,level)*nyb - 1)
-	      A->at(cnn) += 1.0/dy2;
-	    
-	    if(lva < level && lva != -1){
-	      if(D == 1 || U == 1){
-		A->at(cnn) = A->at(cnn) - 0.25/dy2;
-		cout << cnn << " " << A->at(cnn) << " " << " " << k << " " << idv << endl;
-		
-	      }
-	      else if(R == 1 || L == 1){
-		A->at(cnn) = A->at(cnn) - 0.25/dx2;
-		//	cout << cnn << " " << A->at(cnn) << " " << " " << k << " " << idv << endl;
-	      }
-	    }
-	     // alteracao da diagonal interpolacao grossa-fina
-	    cnnd = cnn;
-	  } // Diagonal da matriz
-	  cnn++;
-	  ccv++;
-	  idva = idv;
-	  if(level != lv)
-	    lva = lv;
-	} // vizinhas nao repetidas
-	else{
-	  vr++;
-	  if(lv < level){
-	    if((D == 1 || U == 1) && (i%2 !=0) && (((j%2 == 0) && (iv == (i+1)/2) && (jv == (j+1)/2-1)) || ((j%2 != 0) && (iv == (i+1)/2) && (jv == (j+1)/2)))){ //right
-	      cva = search(iv,jv,lv);
-	      if(cva != NULL){
-		A->at(cnn-1) = A->at(cnn-1) - (3.0/16.0)/dx2;
-	      }
-	    }
-	    else if((U == 1 || D == 1) && (i%2 == 0) && (((j%2 == 0) && (iv == (i+1)/2-1) && (jv == (j+1)/2-1)) || ((j%2 != 0) && (iv == (i+1)/2-1) && (jv == (j+1)/2)))){ // left
-	      cva = search(iv,jv,lv);
-	      if(cva != NULL){
-		A->at(cnn-1) = A->at(cnn-1) - (3.0/16.0)/dx2;
-	      }
-	    }
-	    else if((L == 1 || R == 1) && (j%2 != 0) && (((i%2 == 0) && (iv == (i+1)/2-1) && (jv == (j+1)/2)) || ((i%2 != 0) && (iv == (i+1)/2) && (jv == (j+1)/2)))){ // up
-	      cva = search(iv,jv,lv);
-	      if(cva != NULL){
-		A->at(cnn-1) = A->at(cnn-1) - (3.0/16.0)/dy2;
-	      }
-	    }
-	    else if((R == 1 || L == 1) && (j%2 == 0) && (((i%2 == 0) && (iv == (i+1)/2-1) && (jv == (j+1)/2-1)) || ((i%2 != 0) && (iv == (i+1)/2) && (jv == (j+1)/2-1)))){ //down
-	      cva = search(iv,jv,lv);
-	      if(cva != NULL){
-		A->at(cnn-1) = A->at(cnn-1) - (3.0/16.0)/dy2;
-	      }
-	    }
-	   
-	  }
-	  idva = idv;
-	}
-	
-	//cout << "NV = " << lnew->size() << " " << cnn << " " << cnnd << endl;	  
-      } // celula existe
-      if(vr != 0){
-	if(R == 1 || L == 1){
-	  A->at(cnnd) = A->at(cnnd) - 0.25/dy2;
-	  //cout << "RUD " << cnn << " " << cnnd << " " << A->at(cnnd) << " " << " " << k << " " << idv << endl;
-	}
-	if(U == 1 || D == 1){
-	  A->at(cnnd) = A->at(cnnd) - 0.25/dx2;
-	  //cout << "RLR " << cnn << " " << cnnd << " " << A->at(cnnd) << " " << " " << k << " " << idv << endl;
-	}
-      }
-      //	A->at(cnnaux) = A->at(cnnaux) - 0.25*vr;
-      // alteracao da diagonal interpolacao grossa-fina com vizinhas repetidas
-    } // repeticao numero de vizinhas (elementos nao nulos por colunas)
-  } // repeticao numero de incognitas (linhas da matriz)
-  IA->at(ncell) = cnn;
-}
-
-/* Resolve o sistema Ax = b via Gauss - seidel */
-
-void mesh::gs_csr(vector <double> * x, vector <double> * A, vector <int> * IA, vector <int> * JA, vector <double> * b, int ncell){
-  vector <double> * res;
-  res = new vector<double> (ncell);
-  int i, j, k1, k2, k, id, kmax = 1000;
-  double soma, rmax = 1.0, tol = 1.0e-8;
-
-  k = 0;
-  id = 0;
-  while((rmax > tol) && (k < kmax)){
-    cout << "P1 " << k << " " << rmax << endl;
-    for(i = 0; i < ncell; i++){
-      cout << i << " " << endl;
-      soma = 0.0;
-      k1 = IA->at(i);
-      k2 = IA->at(i+1);
-      for(j = k1; j < k2; j++){
-	if(JA->at(j) == i)
-	  id = j;
-	cout << "P2 " << soma << " " << j << endl;
-	soma += (A->at(i))*(x->at(JA->at(j)));
-      }
-      soma = soma - A->at(id)*(x->at(JA->at(id)));
-      x->at(i) = (b->at(i) - soma)/(A->at(id));
-      cout << "P4 " << i << endl;
-    }
-    cout << "PP" << endl;
-    for(i = 0; i < ncell; i++){
-      soma = 0.0;
-      k1 = IA->at(i);
-      k2 = IA->at(i+1);
-      cout << "P5 " << k1 << " " << k2 << endl;
-      for(j = k1; j < k2; j++){
-	soma += (A->at(i))*(x->at(JA->at(j)));
-	cout << "P6 " << j << " " << soma << endl;
-      }
-      res->at(i) = b->at(i) - soma;
-    }
-    
-    k++;
-    rmax = normmax(res, ncell);
-    cout << "iter = " << k << " resmax = " << rmax << endl;
-  }
-}
 
 /* Norma do maximo de um vetor */
 
