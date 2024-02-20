@@ -54,10 +54,10 @@ class mesh {
   void calculation_function (double (* f) (double x, double y), vector <double> * fvalue);
   int counting_mesh_cell();
   
-  list <cell *> * boundary_cells_south();
-  list <cell *> * boundary_cells_north();
-  list <cell *> * boundary_cells_east();
-  list <cell *> * boundary_cells_west();
+  list <cell *> * boundary_cells_south(int tbc);
+  list <cell *> * boundary_cells_north(int tbc);
+  list <cell *> * boundary_cells_east(int tbc);
+  list <cell *> * boundary_cells_west(int tbc);
   void print_list(list <cell *> * bc);
   
   void triangular_mesh(int * ncellp, int * nelemp, int * narep, int * nvertp);

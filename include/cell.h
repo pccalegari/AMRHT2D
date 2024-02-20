@@ -10,7 +10,10 @@ class cell {
   int x, y;
   int level;//0, 1, 2, 3, 4, ... from the courser to the finest
   int index;
-  double velu, velv, phi, phi0;
+  int bc;
+  double phi, phi0, velu, velv;
+  list <double> wpoisson;
+  list <cell *> * nb;
   int cp;
   list <cell *>::iterator pointer_to_list;//ponteiro para a célula na lista de células da malha
   
@@ -21,12 +24,17 @@ class cell {
   int get_cell_y();
   int get_cell_level();
   int get_cell_index();
+  int get_cell_bc();
   int get_cell_with_particle();
   void set_cell_index(int ivalue);
+  void set_cell_bc(int tbc);
   double get_cell_velu();
   double get_cell_velv();
   double get_cell_phi();
   double get_cell_phi0();
+  list <cell *> * get_cell_nb();
+  list <double> get_cell_wpoisson();
+  void set_cell_nb(list <cell *> * vnb);
   void set_cell_velu(double uvalue);
   void set_cell_velv(double vvalue);
   void set_cell_phi(double phivalue);
