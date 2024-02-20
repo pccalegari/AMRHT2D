@@ -42,3 +42,35 @@ double dominio::get_xend(){
 double dominio::get_yend(){
   return yend;
 }
+
+void dominio::set_tbc_left(int tbc){
+  tbc_left = tbc;
+}
+
+void dominio::set_tbc_right(int tbc){
+  tbc_right = tbc;
+}
+
+void dominio::set_tbc_up(int tbc){
+  tbc_up = tbc;
+}
+
+void dominio::set_tbc_down(int tbc){
+  tbc_down = tbc;
+}
+
+int dominio::get_tbc_left(){
+  return tbc_left;
+}
+
+int dominio::get_tbc_right(){
+  return tbc_right;
+}
+
+int dominio::get_tbc_up(){
+  return tbc_up;
+}
+
+int dominio::get_tbc_down(){
+  return tbc_down;
+}

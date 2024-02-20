@@ -1,8 +1,8 @@
 #include "cell.h"
 
 cell::cell (){
-  x = y = level = index = -1;
-  velu = velv = phi = phi0 = 0.0;
+  x = y = level = index = -1, bc = 0;
+  phi0 = phi = velv = velu = 0.0;
   cp = 0;
 }
 
@@ -29,8 +29,16 @@ int cell::get_cell_index(){
   return index;
 }
 
+int cell::get_cell_bc(){
+  return bc;
+}
+
 void cell::set_cell_index(int ivalue){
   index = ivalue;
+}
+
+void cell::set_cell_bc(int tbc){
+  bc = tbc;
 }
 
 double cell::get_cell_velu(){
@@ -51,6 +59,18 @@ double cell::get_cell_phi0(){
 
 int cell::get_cell_with_particle(){
   return cp;
+}
+
+list <cell *> * cell::get_cell_nb(){
+  return nb;
+}
+
+void cell::set_cell_nb(list <cell *> * vnb){
+  nb = vnb;
+}
+
+list <double> cell::get_cell_wpoisson(){
+  return wpoisson;
 }
 
 void cell::set_cell_velu(double uvalue){

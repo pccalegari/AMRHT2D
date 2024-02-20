@@ -192,7 +192,7 @@ void mesh::create_unstructured_mesh(double (* f) (double x, double y, double t),
   char palavra [100];
   for (int i = 0; i < 100; i++)
     palavra[0] = '\0';
-  sprintf(palavra,"/home/priscila/Documentos/Pesquisa/AMRHT2D-master/data/basic%4.3lf.silo", 1 + tempo);
+  sprintf(palavra,"/home/priscila/Documentos/Pesquisa/Codes/AMRHT2D/data/basic%4.3lf.silo", 1 + tempo);
   
   dbfile = DBCreate(palavra, DB_CLOBBER, DB_LOCAL,"Comment about the data", DB_HDF5);
   if(dbfile == NULL)
@@ -521,7 +521,7 @@ void mesh::left_neighbours (cell * c, list <cell *> * nb) {
 	//printf ("(%d, %d): %d)\n", xl, yl, i);
 	cell * found = H->search (xl, yl, l);
 	if (found != NULL) {
-	  nb->insert (nb->begin(), found);
+	  nb->insert (nb->end(), found);
 	  //cout << "FOUND in coarser" << endl;
 	  //printf ("L.: (%d, %d): %d)\n", xl, yl, l);
 	  break;
@@ -538,7 +538,7 @@ void mesh::left_neighbours (cell * c, list <cell *> * nb) {
 	    //printf ("(%d, %d): %d)\n", xl, yl, i);
 	    cell * found = H->search (xl, yl, l);
 	    if (found != NULL) {
-	      nb->insert (nb->begin(), found);
+	      nb->insert (nb->end(), found);
 	      ///cout << "FOUND in finer" << endl;
 	      //printf ("L.: (%d, %d): %d)\n", xl, yl, l);
 	    }
@@ -546,6 +546,9 @@ void mesh::left_neighbours (cell * c, list <cell *> * nb) {
 	} 
       }
     }
+  }
+  else{
+    
   }
 }
 
@@ -565,7 +568,7 @@ void mesh::right_neighbours (cell * c, list <cell *> * nb) {
 	//printf ("R.: (%d, %d): %d)\n", xl, yl, i);
 	cell * found = H->search (xl, yl, i);
 	if (found != NULL) {
-	  nb->insert (nb->begin(), found);
+	  nb->insert (nb->end(), found);
 	  //cout << "FOUND in coarser" << endl;
 	  //printf ("R.: (%d, %d): %d)\n", xl, yl, i);
 	  break;
@@ -581,7 +584,7 @@ void mesh::right_neighbours (cell * c, list <cell *> * nb) {
 	  //printf ("R.: (%d, %d): %d)\n", xl, yl, i);
 	  cell * found = H->search (xl, yl, i);
 	  if (found != NULL) {
-	    nb->insert (nb->begin(), found);
+	    nb->insert (nb->end(), found);
 	    //cout << "FOUND in finer" << endl;
 	    //printf ("R.: (%d, %d): %d)\n", xl, yl, i);
 	  }
@@ -607,7 +610,7 @@ void mesh::down_neighbours (cell * c, list <cell *> * nb) {
 	//printf ("(%d, %d): %d)\n", xl, yl, i);
 	cell * found = H->search (xl, yl, i);
 	if (found != NULL){
-	  nb->insert (nb->begin(), found);
+	  nb->insert (nb->end(), found);
 	  //found = H->search(xl-1, yl, i);
 	  //if(found != NULL){
 	  //  nb->insert(nb->begin(), found);
@@ -633,7 +636,7 @@ void mesh::down_neighbours (cell * c, list <cell *> * nb) {
 	  //printf ("(%d, %d): %d)\n", xl, yl, i);
 	  cell * found = H->search (xl, yl, i);
 	  if (found != NULL) {
-	    nb->insert (nb->begin(), found);
+	    nb->insert (nb->end(), found);
 	    //cout << "FOUND in finer" << endl;
 	    //printf ("D.: (%d, %d): %d)\n", xl, yl, i);
 	    //found = H->search (xl-1, yl, i);
@@ -670,7 +673,7 @@ void mesh::up_neighbours (cell * c, list <cell *> * nb) {
 	//printf ("R.: (%d, %d): %d)\n", xl, yl, i);
 	cell * found = H->search (xl, yl, i);
 	if (found != NULL) {
-	  nb->insert (nb->begin(), found);
+	  nb->insert (nb->end(), found);
 	  //found = H->search(xl-1, yl, i);
 	  //if(found != NULL){
 	  //  nb->insert(nb->begin(), found);
@@ -696,7 +699,7 @@ void mesh::up_neighbours (cell * c, list <cell *> * nb) {
 	  //printf ("R.: (%d, %d): %d)\n", xl, yl, i);
 	  cell * found = H->search (xl, yl, i);
 	  if (found != NULL) {
-	    nb->insert (nb->begin(), found);
+	    nb->insert (nb->end(), found);
 	    //found = H->search (xl-1, yl, i);
 	    //if (found != NULL) {
 	    //  nb->insert (nb->begin(), found);
@@ -719,14 +722,15 @@ void mesh::up_neighbours (cell * c, list <cell *> * nb) {
 
 list <cell *> * mesh::neighbours (cell * c) {
   list <cell *> * nb = new list <cell*>;
-  nb->insert(nb->begin(), c);
   this->left_neighbours(c, nb);
-  this->right_neighbours(c, nb);
   this->down_neighbours(c, nb);
+  this->right_neighbours(c, nb);
   this->up_neighbours(c, nb);
+  nb->insert(nb->begin(), c);
 
   return nb;
 }
+
 
 /* insere vizinhas na ordem */
 
@@ -745,7 +749,7 @@ void mesh::insert_neighbour(cell * c, list <cell *> * nb){
 
 
 /* Células da fronteira */
-list <cell *> * mesh::boundary_cells_south() {
+list <cell *> * mesh::boundary_cells_south(int tbc) {
   int i, j;
   list <cell *> * bcs = new list <cell*>;
   for (int k = 0; k < number_of_levels; k++) {
@@ -758,6 +762,7 @@ list <cell *> * mesh::boundary_cells_south() {
 	if(j == 0){
 	  //c->print_cell();
 	  bcs->insert(bcs->begin(), c);
+	  c->set_cell_bc(tbc);
 	}
       }
     }
@@ -765,7 +770,7 @@ list <cell *> * mesh::boundary_cells_south() {
   return bcs;
 }
 
-list <cell *> * mesh::boundary_cells_north() {
+list <cell *> * mesh::boundary_cells_north(int tbc) {
   int i, j;
   
   list <cell *> * bcn = new list <cell*>;
@@ -778,6 +783,7 @@ list <cell *> * mesh::boundary_cells_north() {
 	if(j == pow(2,k)*nyb - 1){
 	  //c->print_cell();
 	  bcn->insert(bcn->begin(), c);
+	  c->set_cell_bc(tbc);
 	}
       }
     }
@@ -785,7 +791,7 @@ list <cell *> * mesh::boundary_cells_north() {
   return bcn;
 }
 
-list <cell *> * mesh::boundary_cells_east() {
+list <cell *> * mesh::boundary_cells_east(int tbc) {
   int i, j;
   list <cell *> * bce = new list <cell*>;
   for (int k = 0; k < number_of_levels; k++) {
@@ -794,15 +800,17 @@ list <cell *> * mesh::boundary_cells_east() {
       j = (*it)->get_cell_y();
       cell * c = search(i, j, k);
       if (c != NULL){
-	if(i == 0)
+	if(i == 0){
 	  bce->insert(bce->begin(), c);
+	  c->set_cell_bc(tbc);
+	}
       }
     }
   }
   return bce;
 }
 
-list <cell *> * mesh::boundary_cells_west() {
+list <cell *> * mesh::boundary_cells_west(int tbc) {
   int i, j;
   
   list <cell *> * bcw = new list <cell*>;
@@ -812,8 +820,10 @@ list <cell *> * mesh::boundary_cells_west() {
       j = (*it)->get_cell_y();
       cell * c = search(i, j, k);
       if (c != NULL){
-	if(i == pow(2,k)*nxb - 1)
+	if(i == pow(2,k)*nxb - 1){
 	  bcw->insert(bcw->begin(), c);
+	  c->set_cell_bc(tbc);
+	}
       }
     }
   }
