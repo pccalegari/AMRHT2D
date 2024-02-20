@@ -5,12 +5,13 @@
 #Adicione: export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$path$/szip/lib:$path$/hdf5/lib:$path$/silo/lib:$path$/petsc/lib"
 
 
-INCLUDE_PATH=include 
-INCLUDE_SILO_PATH=/home/priscila/Documents/Pesquisa/Programas/silo/include
-LIB_PATH=-L/home/priscila/Documents/Pesquisa/Programas/hdf5/lib -L/home/priscila/Documents/Pesquisa/Programas/szip/lib  -L/home/priscila/Documents/Pesquisa/Programas/zlib/lib -L/home/priscila/Documents/Pesquisa/Programas/silo/lib -lhdf5 -lsz -lz -lm -lsiloh5
+INCLUDE_PATH=include
+LIBRARY_PATH=/home/priscila/Documentos/Programas
+INCLUDE_SILO_PATH=$(LIBRARY_PATH)/silo/include
+LIB_PATH=-L$(LIBRARY_PATH)/hdf5/lib -L$(LIBRARY_PATH)/szip/lib  -L$(LIBRARY_PATH)/zlib/lib -L$(LIBRARY_PATH)/silo/lib -lhdf5 -lsz -lz -lm -lsiloh5
 
 PETSC_ARCH=""
-PETSC_DIR=/home/priscila/Documents/Programas/petsc
+PETSC_DIR=$(LIBRARY_PATH)/petsc
 include ${PETSC_DIR}/lib/petsc/conf/variables
 PETSC_FLAGS = -I${PETSC_DIR}/include -L${PETSC_DIR}/lib/libpetsc_real.so
 
@@ -20,7 +21,7 @@ DATA=data
 CC=g++
 
 OPTIONS=-Wall -ansi -pedantic -Wno-unused-result -O3 -std=c++11
-LIBS= -L/home/priscila/Documents/Pesquisa/Programas/silo/lib -lsiloh5 -L/home/priscila/Documents/Pesquisa/Programas/hdf5/lib -lhdf5 -L/home/priscila/Documents/Pesquisa/Programas/zlib/lib -lz -lm
+LIBS= -L$(LIBRARY_PATH)/silo/lib -lsiloh5 -L$(LIBRARY_PATH)/hdf5/lib -lhdf5 -L$(LIBRARY_PATH)/zlib/lib -lz -lm
 
 all:
 	$(CC) $(OPTIONS) -c -I$(INCLUDE_PATH) $(SRC)/particle.cpp -lm -o $(SRC)/particle.o
@@ -79,9 +80,8 @@ test4:
 	$(CC) $(OPTIONS) -c -I$(INCLUDE_PATH) $(SRC)/double_hash_table.cpp -lm -o $(SRC)/double_hash_table.o
 	$(CC) $(OPTIONS) -c -I$(INCLUDE_PATH) $(SRC)/dominio.cpp -lm -o $(SRC)/dominio.o
 	$(CC) $(OPTIONS) -c -I$(INCLUDE_PATH) -I$(INCLUDE_SILO_PATH) $(SRC)/mesh.cpp -lm -o $(SRC)/mesh.o
-	$(CC) $(OPTIONS) -c $(PETSC_FLAGS) -I$(INCLUDE_PATH) $(SRC)/PetscFacade.cpp -lm -o $(SRC)/PetscFacade.o
-	$(CC) $(OPTIONS) -c $(PETSC_FLAGS) -I$(INCLUDE_PATH) -I$(INCLUDE_SILO_PATH) $(TEST)/test_fachada.cpp -lm -o $(TEST)/test.o ${PETSC_KSP_LIB}
-	$(CC) -fPIC $(OPTIONS)  $(SRC)/particle.o $(SRC)/ode.o $(SRC)/cell.o $(SRC)/double_cell.o $(SRC)/hash_table.o $(SRC)/double_hash_table.o $(SRC)/dominio.o $(SRC)/mesh.o $(SRC)/PetscFacade.o $(TEST)/test.o $(LIBS) -o $(TEST)/test4 ${PETSC_VEC_LIB}
+	$(CC) $(OPTIONS) -c $(PETSC_FLAGS) -I$(INCLUDE_PATH) -I$(INCLUDE_SILO_PATH) $(TEST)/test_LaplaceAMR.cpp -lm -o $(TEST)/test.o ${PETSC_KSP_LIB}
+	$(CC) -fPIC $(OPTIONS)  $(SRC)/particle.o $(SRC)/ode.o $(SRC)/cell.o $(SRC)/double_cell.o $(SRC)/hash_table.o $(SRC)/double_hash_table.o $(SRC)/dominio.o $(SRC)/mesh.o $(TEST)/test.o $(LIBS) -o $(TEST)/test4 ${PETSC_VEC_LIB}
 
 gdb:
 	$(CC) $(OPTIONS) -c -g -I$(INCLUDE_PATH) $(SRC)/particle.cpp -lm -o $(SRC)/particle.o
