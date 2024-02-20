@@ -31,19 +31,23 @@ static char help[] = "Solve a Poisson 2D!";
 
 int main (int argc, char **args){
 
-  int number_of_levels = 1, nxb = 8, nyb = 8, N = nxb;
+  int number_of_levels = 1, nxb = 64, nyb = 64;
   int ncell;
   dominio *D;
   double xbegin, ybegin, xend, yend;
   xbegin = ybegin = 0.0;
   xend = yend = 1.0;
   D = new dominio(xbegin, ybegin, xend, yend);
-
+  D->set_tbc_left(1);
+  D->set_tbc_right(1);
+  D->set_tbc_up(1);
+  D->set_tbc_down(1);
+  
   mesh *M;
   M = new mesh(D, number_of_levels, nxb, nyb);
   double dx, dy, xd, yd;
-  list <cell *> *l;
-  list <cell *>::iterator it;
+  list <cell *> *l, *lnb;
+  list <cell *>::iterator it, kt;
   
   KSP ksp;
   PetscReal norm, aux;
@@ -95,7 +99,7 @@ int main (int argc, char **args){
   PetscCall(VecDuplicate(rhs, &uexa));
   PetscCall(VecSet(u, 0.0));
 
-  /* Enumeração */
+  /* Enumeração e lista de vizinhas */
   ncell = M->counting_mesh_cell();
   printf("%d\n", ncell);
 
@@ -112,15 +116,17 @@ int main (int argc, char **args){
       aux = (PetscScalar)(sol_u(xd, yd));
       VecSetValues(uexa, 1, &iglobal, &aux, INSERT_VALUES);
       aux = dx*dy * (PetscScalar)(f_rhs(xd, yd));
-      //printf("%d %d %f %f\n", (*it)->get_cell_x(), (*it)->get_cell_y(),  xd, yd);
-      //printf("%f %f\n", sol_u(xd,yd), f_rhs(xd, yd));
       VecSetValues(rhs, 1, &iglobal, &aux, INSERT_VALUES);
-      
+      (*it)->set_cell_nb(M->neighbours(*it));
+      //printf("Celula:\n");
+      //(*it)->print_cell();
+      //printf("Vizinhas:\n");
+      //M->print_list((*it)->get_cell_nb());
     }
   }
 
   /* Alteracao do lado direito por causa da variavel no centro da celula */
-  list <cell *> * bcs = M->boundary_cells_south();
+  list <cell *> * bcs = M->boundary_cells_south(D->get_tbc_down());
   for(list <cell *>::iterator it = bcs->begin(); it != bcs->end(); it++){
     int l = (*it)->get_cell_level();
     dx = fabs(xend - xbegin) / (nxb * pow(2, l));
@@ -130,7 +136,7 @@ int main (int argc, char **args){
     VecSetValues(rhs, 1, &iglobal, &aux, ADD_VALUES);
   }
   
-  list <cell *> * bcn = M->boundary_cells_north();
+  list <cell *> * bcn = M->boundary_cells_north(D->get_tbc_up());
   for(list <cell *>::iterator it = bcn->begin(); it != bcn->end(); it++){
     int l = (*it)->get_cell_level();
     dx = fabs(xend - xbegin) / (nxb * pow(2, l));
@@ -140,7 +146,7 @@ int main (int argc, char **args){
     VecSetValues(rhs, 1, &iglobal, &aux, ADD_VALUES);
   }
   
-  list <cell *> * bce = M->boundary_cells_east();
+  list <cell *> * bce = M->boundary_cells_east(D->get_tbc_left());
   for(list <cell *>::iterator it = bce->begin(); it != bce->end(); it++){
     int l = (*it)->get_cell_level();
     dy = fabs(yend - ybegin) / (nyb * pow(2, l));
@@ -150,7 +156,7 @@ int main (int argc, char **args){
     VecSetValues(rhs, 1, &iglobal, &aux, ADD_VALUES);
   }
   
-  list <cell *> * bcw = M->boundary_cells_west();
+  list <cell *> * bcw = M->boundary_cells_west(D->get_tbc_right());
   for(list <cell *>::iterator it = bcw->begin(); it != bcw->end(); it++){
     int l = (*it)->get_cell_level();
     dy = fabs(yend - ybegin) / (nyb * pow(2, l));
@@ -187,23 +193,51 @@ int main (int argc, char **args){
    PetscCall(MatSetFromOptions(A));
    PetscCall(MatSetUp(A));
    
-   for (j = 1; j < N - 1; j++) {
-      for (i = 1; i < N - 1; i++){
-         iglobal = i + j*N; 
-         col2[0] = i + j*N;
-         col2[1] = i + (j+1)*N;
-         col2[2] = i + (j-1)*N;
-         col2[3] = i - 1 + j*N;
-         col2[4] = i + 1 + j*N;
-         PetscCall(MatSetValues(A, 1, &iglobal, 5, col2, w2, INSERT_VALUES));
-      }
+   for (i = 0; i < number_of_levels; i++) {
+     l = M->get_list_cell_by_level(i);
+     
+     for (list <cell *>::iterator it = l->begin(); it != l->end(); it++) {
+       iglobal = (*it)->get_cell_index();
+       lnb = (*it)->get_cell_nb();
+       if((*it)->get_cell_bc() == 0){
+	 j = 0;
+	 for(kt = lnb->begin(); kt != lnb->end(); kt++){
+	   col2[j] = (*kt)->get_cell_index();
+	   //printf("%d %d %d\n", iglobal, j, col2[j]);
+	   j++;
+	 }
+	 PetscCall(MatSetValues(A, 1, &iglobal, j, col2, w2, INSERT_VALUES));
+       }
+       else{
+	 j = 0;
+	 int tam = lnb->size();
+	 if(tam == 3){
+	   for(kt = lnb->begin(); kt != lnb->end(); kt++){
+	     col0[j] = (*kt)->get_cell_index();
+	     j++;
+	   }
+	   PetscCall(MatSetValues(A, 1, &iglobal, j, col0, w0, INSERT_VALUES));
+	 }
+	 else{
+	   for(kt = lnb->begin(); kt != lnb->end(); kt++){
+	     col1[j] = (*kt)->get_cell_index();
+	     j++;
+	   }
+	   PetscCall(MatSetValues(A, 1, &iglobal, j, col1, w1, INSERT_VALUES));
+	 }
+       }
+     }
    }
+   
+   
    //linha 0 canto do domínio
+   /*
    iglobal = 0;
    col0[0] = 0;
    col0[1] = N;
    col0[2] = 1;
    PetscCall(MatSetValues(A, 1, &iglobal, 3, col0, w0, INSERT_VALUES));
+   
    // linha N-1 canto do domínio
    iglobal = N-1;
    col0[0] = N-1;
@@ -249,6 +283,7 @@ int main (int argc, char **args){
       col1[3] = j+(N-2)*N;
       PetscCall(MatSetValues(A, 1, &iglobal, 4, col1, w1, INSERT_VALUES));
    }
+   */
       
    PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
    PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
