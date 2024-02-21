@@ -6,6 +6,7 @@
 #include "double_hash_table.h"
 #include "dominio.h"
 #include "particle.h"
+//#include "weight.h"
 
 using namespace std;
 
@@ -48,6 +49,7 @@ class mesh {
   void insert_neighbour(cell * c, list <cell *> * nb);
   
   list <cell *> * neighbours (cell * c);
+  list <weight> * weight_poisson (cell * c);
   list <cell *> * neighbours_fd (cell * c);
   
   void calculation_exact_function (double (* f) (double_cell * c));
@@ -58,7 +60,8 @@ class mesh {
   list <cell *> * boundary_cells_north(int tbc);
   list <cell *> * boundary_cells_east(int tbc);
   list <cell *> * boundary_cells_west(int tbc);
-  void print_list(list <cell *> * bc);
+  void print_cell_list(list <cell *> * bc);
+  void print_weight_list(list <weight> * bc);
   
   void triangular_mesh(int * ncellp, int * nelemp, int * narep, int * nvertp);
   void triangular_mesh_refined(int * ncellp, int * nelemp, int * narep, int * nvertp);

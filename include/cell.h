@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <vector>
 #include <list>
+#include "weight.h"
 
 using namespace std;
 
@@ -12,7 +13,7 @@ class cell {
   int index;
   int bc;
   double phi, phi0, velu, velv;
-  list <double> wpoisson;
+  list <weight> * wpoisson;
   list <cell *> * nb;
   int cp;
   list <cell *>::iterator pointer_to_list;//ponteiro para a célula na lista de células da malha
@@ -33,8 +34,9 @@ class cell {
   double get_cell_phi();
   double get_cell_phi0();
   list <cell *> * get_cell_nb();
-  list <double> get_cell_wpoisson();
+  list <weight> * get_cell_wpoisson();
   void set_cell_nb(list <cell *> * vnb);
+  void set_cell_wpoisson(list <weight> * lw);
   void set_cell_velu(double uvalue);
   void set_cell_velv(double vvalue);
   void set_cell_phi(double phivalue);
