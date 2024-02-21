@@ -69,8 +69,12 @@ void cell::set_cell_nb(list <cell *> * vnb){
   nb = vnb;
 }
 
-list <double> cell::get_cell_wpoisson(){
+list <weight> * cell::get_cell_wpoisson(){
   return wpoisson;
+}
+
+void cell::set_cell_wpoisson(list <weight> * lw){
+  wpoisson = lw;
 }
 
 void cell::set_cell_velu(double uvalue){
