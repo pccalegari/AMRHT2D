@@ -6,8 +6,8 @@
 using namespace std;
 
 class mat {
- private:
-  
+   private:
+      
  public:
   mat();
   mat(mesh * M);
