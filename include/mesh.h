@@ -49,9 +49,13 @@ class mesh {
   void insert_neighbour(cell * c, list <cell *> * nb);
   
   list <cell *> * neighbours (cell * c);
-  list <weight> * weight_poisson (cell * c);
   list <cell *> * neighbours_fd (cell * c);
-  
+
+  list <cell *> * neighbours_e(cell * c);
+  list <cell *> * neighbours_w(cell * c);
+  list <cell *> * neighbours_s(cell * c);
+  list <cell *> * neighbours_n(cell * c);
+    
   void calculation_exact_function (double (* f) (double_cell * c));
   void calculation_function (double (* f) (double x, double y), vector <double> * fvalue);
   int counting_mesh_cell();
@@ -61,7 +65,7 @@ class mesh {
   list <cell *> * boundary_cells_east(int tbc);
   list <cell *> * boundary_cells_west(int tbc);
   void print_cell_list(list <cell *> * bc);
-  void print_weight_list(list <weight> * bc);
+  void print_weight_list(list <weight> bc);
   
   void triangular_mesh(int * ncellp, int * nelemp, int * narep, int * nvertp);
   void triangular_mesh_refined(int * ncellp, int * nelemp, int * narep, int * nvertp);

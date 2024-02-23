@@ -13,8 +13,8 @@ class cell {
   int index;
   int bc;
   double phi, phi0, velu, velv;
-  list <weight> * wpoisson;
-  list <cell *> * nb;
+  list <weight> wpoisson;
+  list <cell *> * lbw, *lbe, * lbs, * lbn;
   int cp;
   list <cell *>::iterator pointer_to_list;//ponteiro para a célula na lista de células da malha
   
@@ -33,10 +33,16 @@ class cell {
   double get_cell_velv();
   double get_cell_phi();
   double get_cell_phi0();
-  list <cell *> * get_cell_nb();
-  list <weight> * get_cell_wpoisson();
-  void set_cell_nb(list <cell *> * vnb);
-  void set_cell_wpoisson(list <weight> * lw);
+  list <cell *> * get_cell_lbw();
+  list <cell *> * get_cell_lbe();
+  list <cell *> * get_cell_lbn();
+  list <cell *> * get_cell_lbs();
+  list <weight> get_cell_wpoisson();
+  void set_cell_lbw(list <cell *> * vnb);
+  void set_cell_lbe(list <cell *> * vnb);
+  void set_cell_lbn(list <cell *> * vnb);
+  void set_cell_lbs(list <cell *> * vnb);
+  void set_cell_wpoisson(list <weight> lw);
   void set_cell_velu(double uvalue);
   void set_cell_velv(double vvalue);
   void set_cell_phi(double phivalue);
