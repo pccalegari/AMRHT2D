@@ -35,7 +35,7 @@ static char help[] = "Solve a Poisson 2D!";
 
 int main (int argc, char **args){
 
-  int number_of_levels = 1, nxb = 32, nyb = 64;
+  int number_of_levels = 2, nxb = 4, nyb = 4;
   int ncell;
   dominio *D;
   double xbegin, ybegin, xend, yend;
@@ -65,7 +65,7 @@ int main (int argc, char **args){
   PetscScalar w2[5];
   PetscMPIInt size = 1;
 
-  /* Geração da malha */
+  /* Geração da malha adaptativa */
   for(int i = 0; i < number_of_levels - 1; i++){
     l = M->get_list_cell_by_level(i);
     dx = fabs(xend - xbegin)/(nxb * pow(2, i));
@@ -76,9 +76,11 @@ int main (int argc, char **args){
     while(it != l->end()){
       xd = xbegin + (((*it)->get_cell_x()) * dx);
       yd = ybegin + (((*it)->get_cell_y()) * dy);
-      if (f_rhs(xd+0.5*dx, yd+0.5*dy) < 0.999 - i*0.05 && f_rhs(xd+0.5*dx, yd+0.5*dy) > - 0.999 + i*0.05){
-      //if (df(xd, yd, 0.0) < 0.9 && df(xd, yd, 0.0) > - 0.9){
-      	it = M->split(*it);
+      if (xd >= 0.25 && xd < 0.75 && yd >= 0.25 && yd < 0.5){
+	it = M->split(*it);
+      }
+      else if( xd >= 0.25 && xd < 0.5 && yd >= 0.5 && yd < 0.75){
+	it = M->split(*it);
       }
       else
 	it++;
