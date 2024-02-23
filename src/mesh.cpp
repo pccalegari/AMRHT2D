@@ -731,55 +731,30 @@ list <cell *> * mesh::neighbours (cell * c) {
   return nb;
 }
 
-/* Lista de pesos Poisson - uniforme */
-list <weight> * mesh::weight_poisson (cell * c) {
-  list <weight> * lw = new list <weight>;
-  list <cell *> * lnb;
-  weight * wp;
-  list <cell *>::iterator kt;
-  
-  int tam;
-  lnb = neighbours(c);
-  tam = lnb->size();
-  if(tam == 5){
-    wp = new weight(c->get_cell_index(), 4.0);
-    lw->insert(lw->end(),* wp);
-    delete wp;
-    for(kt = lnb->begin(); kt != lnb->end(); kt++){
-      if(c->get_cell_index() != (*kt)->get_cell_index()){
-	wp = new weight((*kt)->get_cell_index(), -1.0);
-	lw->insert(lw->end(), * wp);
-	delete wp;
-      }
-    }
-  }
-  if(tam == 4){
-    wp = new weight(c->get_cell_index(), 5.0);
-    lw->insert(lw->end(), * wp);
-    delete wp;
-    for(kt = lnb->begin(); kt != lnb->end(); kt++){
-      if(c->get_cell_index() != (*kt)->get_cell_index()){
-	wp = new weight((*kt)->get_cell_index(), -1.0);
-	lw->insert(lw->end(), * wp);
-	delete wp;
-      }
-    }
-  }
-  if(tam == 3){
-    wp = new weight(c->get_cell_index(), 6.0);
-    lw->insert(lw->end(), * wp);
-    delete wp;
-    for(kt = lnb->begin(); kt != lnb->end(); kt++){
-      if(c->get_cell_index() != (*kt)->get_cell_index()){
-	wp = new weight((*kt)->get_cell_index(), -1.0);
-	lw->insert(lw->end(), * wp);
-	delete wp;
-      }
-    }
-  }
-  
-  return lw;
+list <cell *> * mesh::neighbours_e(cell * c) {
+  list <cell *> * nb = new list <cell*>;
+  this->right_neighbours(c, nb);
+  return nb;
 }
+
+list <cell *> * mesh::neighbours_w(cell * c) {
+  list <cell *> * nb = new list <cell*>;
+  this->left_neighbours(c, nb);
+  return nb;
+}
+
+list <cell *> * mesh::neighbours_s(cell * c) {
+  list <cell *> * nb = new list <cell*>;
+  this->down_neighbours(c, nb);
+  return nb;
+}
+
+list <cell *> * mesh::neighbours_n(cell * c) {
+  list <cell *> * nb = new list <cell*>;
+  this->up_neighbours(c, nb);
+  return nb;
+}
+
 
 /* insere vizinhas na ordem */
 
@@ -885,8 +860,8 @@ void mesh::print_cell_list(list <cell *> * bc){
    
 }
 
-void mesh::print_weight_list(list <weight> * bc){
-  for(list <weight>::iterator it = bc->begin(); it !=bc->end(); it++) 
+void mesh::print_weight_list(list <weight> bc){
+  for(list <weight>::iterator it = bc.begin(); it !=bc.end(); it++) 
     printf("%d %f\n", (it)->get_weight_index(), (it)->get_weight_w());
    
 }

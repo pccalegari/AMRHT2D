@@ -38,7 +38,7 @@ void cell::set_cell_index(int ivalue){
 }
 
 void cell::set_cell_bc(int tbc){
-  bc = tbc;
+  bc += tbc;
 }
 
 double cell::get_cell_velu(){
@@ -61,19 +61,43 @@ int cell::get_cell_with_particle(){
   return cp;
 }
 
-list <cell *> * cell::get_cell_nb(){
-  return nb;
+list <cell *> * cell::get_cell_lbw(){
+  return lbw;
 }
 
-void cell::set_cell_nb(list <cell *> * vnb){
-  nb = vnb;
+list <cell *> * cell::get_cell_lbe(){
+  return lbe;
 }
 
-list <weight> * cell::get_cell_wpoisson(){
+list <cell *> * cell::get_cell_lbn(){
+  return lbn;
+}
+
+list <cell *> * cell::get_cell_lbs(){
+  return lbs;
+}
+
+void cell::set_cell_lbw(list <cell *> * vnb){
+  lbw = vnb;
+}
+
+void cell::set_cell_lbe(list <cell *> * vnb){
+  lbe = vnb;
+}
+
+void cell::set_cell_lbn(list <cell *> * vnb){
+  lbn = vnb;
+}
+
+void cell::set_cell_lbs(list <cell *> * vnb){
+  lbs = vnb;
+}
+
+list <weight> cell::get_cell_wpoisson(){
   return wpoisson;
 }
 
-void cell::set_cell_wpoisson(list <weight> * lw){
+void cell::set_cell_wpoisson(list <weight> lw){
   wpoisson = lw;
 }
 
