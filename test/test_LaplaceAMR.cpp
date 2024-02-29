@@ -4,7 +4,8 @@
 #include <cmath>
 #include <ctime>
 
-#include "mesh.h" 
+#include "mesh.h"
+#include "point.h"
 #include <vector>
 
 #include <petscksp.h>
@@ -27,6 +28,11 @@ double f_rhs(double x, double y) {
   return (8.0 * PI * PI * sin(2.0 * PI * x) * sin(2.0 * PI * y));
 }
 
+double distance(double px, double py, double qx, double qy){
+  double d = sqrt((px - qx)*(px - qx) + (py - qy)*(py - qy));
+  return d;
+}
+  
 //extern PetscErrorCode ComputeMatrix(KSP, Mat, Mat, void *);
 //extern PetscErrorCode ComputeRHS(KSP, Vec, void *);
 //extern PetscErrorCode ComputeInitialGuess(KSP, Vec, void *);
@@ -36,8 +42,9 @@ static char help[] = "Solve a Poisson 2D!";
 int main (int argc, char **args){
 
   int number_of_levels = 2, nxb = 4, nyb = 4;
-  int ncell;
+  int ncell, nivel, nl;
   dominio *D;
+  point *p, *q, *s;
   double xbegin, ybegin, xend, yend;
   xbegin = ybegin = 0.0;
   xend = yend = 1.0;
@@ -50,6 +57,7 @@ int main (int argc, char **args){
   mesh *M;
   M = new mesh(D, number_of_levels, nxb, nyb);
   double dx, dy, xd, yd, dx2, dy2, De, Dw, Ds, Dn, Dp;
+  double xe, xw, yn, ys, h1, h2, xa, ya;
   list <cell *> *l;
   list <weight> MP;
   list <weight>::iterator wt;
@@ -76,7 +84,7 @@ int main (int argc, char **args){
     while(it != l->end()){
       xd = xbegin + (((*it)->get_cell_x()) * dx);
       yd = ybegin + (((*it)->get_cell_y()) * dy);
-      if (xd >= 0.25 && xd < 0.75 && yd >= 0.25 && yd < 0.5){
+      if (xd >= 0.5 && xd < 0.75 && yd >= 0.25 && yd < 0.75){
 	it = M->split(*it);
       }
       else if( xd >= 0.25 && xd < 0.5 && yd >= 0.5 && yd < 0.75){
@@ -88,7 +96,7 @@ int main (int argc, char **args){
     }
    
   }
-    
+  
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &args, (char *)0, help));
   PetscCall(MPI_Comm_size(PETSC_COMM_WORLD, &size));
@@ -101,7 +109,8 @@ int main (int argc, char **args){
   /* Enumeração e lista de vizinhas */
   ncell = M->counting_mesh_cell();
   printf("%d\n", ncell);
-
+  M->create_nongraded_mesh();
+  
   /* Create right-size and solution vectors */
   //u = Petsc.createVector(N*N);
   PetscCall(VecCreate(PETSC_COMM_SELF, &u));
@@ -154,7 +163,7 @@ int main (int argc, char **args){
     dy2 = dy*dy;
     xd = xbegin + ((*it)->get_cell_x() + 0.5)*dx;
     Ds = -Dif(xd, ybegin)/dy2;
-    aux = Ds * 2.0 * (PetscScalar)(sol_u(xd, ybegin));
+    aux = - Ds * 2.0 * (PetscScalar)(sol_u(xd, ybegin));
     iglobal = (*it)->get_cell_index();
     VecSetValues(rhs, 1, &iglobal, &aux, ADD_VALUES);
   }
@@ -167,7 +176,7 @@ int main (int argc, char **args){
     dy2 = dy*dy;
     xd = xbegin + ((*it)->get_cell_x() + 0.5)*dx;
     Dn = -Dif(xd, yend)/dy2;
-    aux = Dn * 2.0 * (PetscScalar)(sol_u(xd, yend));
+    aux = - Dn * 2.0 * (PetscScalar)(sol_u(xd, yend));
     iglobal = (*it)->get_cell_index();
     VecSetValues(rhs, 1, &iglobal, &aux, ADD_VALUES);
   }
@@ -180,7 +189,7 @@ int main (int argc, char **args){
     dx2 = dx*dx;
     yd = ybegin + ((*it)->get_cell_y() + 0.5)*dy;
     De = -Dif(xend, yd)/dx2;
-    aux = De * 2.0 * (PetscScalar)(sol_u(xend, yd));
+    aux = - De * 2.0 * (PetscScalar)(sol_u(xend, yd));
     iglobal = (*it)->get_cell_index();
     VecSetValues(rhs, 1, &iglobal, &aux, ADD_VALUES);
   }
@@ -193,7 +202,7 @@ int main (int argc, char **args){
     dx2 = dx*dx;
     yd = ybegin + ((*it)->get_cell_y() + 0.5)*dy;
     Dw = -Dif(xbegin, yd)/dx2;
-    aux = Dw * 2.0 * (PetscScalar)(sol_u(xbegin, yd));
+    aux = - Dw * 2.0 * (PetscScalar)(sol_u(xbegin, yd));
     iglobal = (*it)->get_cell_index();
     VecSetValues(rhs, 1, &iglobal, &aux, ADD_VALUES);
   }
@@ -211,14 +220,21 @@ int main (int argc, char **args){
     for (list <cell *>::iterator it = l->begin(); it != l->end(); it++) {
       weight wp, we, ww, ws, wn;
       list <weight> lw;
+      //printf("Celula:\n");
+      //(*it)->print_cell();
       i = (*it)->get_cell_x();
       j = (*it)->get_cell_y();
-      xd = xbegin + ((i + 0.5) * dx);
-      yd = ybegin + ((j + 0.5) * dy);
-      De = -Dif(xd + 0.5*dx, yd)/dx2;
-      Dw = -Dif(xd - 0.5*dx, yd)/dx2;
-      Ds = -Dif(xd, yd - 0.5*dy)/dy2;
-      Dn = -Dif(xd, yd + 0.5*dy)/dy2;
+      nivel = (*it)->get_cell_level();
+      xd = xbegin + (i + 0.5) * dx;
+      yd = ybegin + (j + 0.5) * dy;
+      xe = xd + 0.5*dx;
+      xw = xd - 0.5*dx;
+      yn = yd + 0.5*dy;
+      ys = yd - 0.5*dy;
+      De = -Dif(xe, yd)/dx2;
+      Dw = -Dif(xw, yd)/dx2;
+      Ds = -Dif(xd, ys)/dy2;
+      Dn = -Dif(xd, yn)/dy2;
       lvw = (*it)->get_cell_lbw();
       lvs = (*it)->get_cell_lbs();
       lve = (*it)->get_cell_lbe();
@@ -226,46 +242,118 @@ int main (int argc, char **args){
             
       Dp = -(De + Dw + Ds + Dn);
            
-      if(lvw->size() != 0){
-	for(list <cell *>::iterator wt = lvw->begin(); wt != lvw->end(); wt++){
+      if(lvw->size() > 1){
+	printf("Nivel mais fino - Precisa corrigir se nivel mais fino > 2");
+	list <cell *>::iterator wt = lvw->begin();
+	nl = (*wt)->get_cell_level();
+	for(wt = lvw->begin(); wt != lvw->end(); wt++){
 	  ww.set_weight_index((*wt)->get_cell_index());
-	  ww.set_weight_w(Dw); //Precisa corrigir Dw varia no AMR
+	  double dxv = fabs(xend - xbegin) / (nxb * pow(2, (*wt)->get_cell_level()));
+	  xa = xbegin + ((*wt)->get_cell_x() + 0.5) * dxv;
+	  h1 = distance(xw, yd, xa, yd);
+	  h2 = distance(xd, yd, xa, yd);
+	  ww.set_weight_w(Dw*(h1 + h2)/2.0); //Peso vem do MMQ
 	  lw.insert(lw.end(), ww);
 	}
       }
-      else{
+      else if(lvw->size() < 1){
 	Dp -= Dw;
       }
-      if(lvs->size() != 0){
+      else{
+	for(list <cell *>::iterator wt = lvw->begin(); wt != lvw->end(); wt++){
+	  nl = (*wt)->get_cell_level();
+	}
+	if(nivel == nl){
+	  for(list <cell *>::iterator wt = lvw->begin(); wt != lvw->end(); wt++){
+	    ww.set_weight_index((*wt)->get_cell_index());
+	    ww.set_weight_w(Dw);
+	    lw.insert(lw.end(), ww);	  
+	  }
+	}
+	else{
+	  printf("Nivel mais grosso - MMQ\n");
+	}
+      }
+      if(lvs->size() > 1){
+	printf("Nivela mais fino - MMQ\n");
 	for(list <cell *>::iterator wt = lvs->begin(); wt != lvs->end(); wt++){
 	  ws.set_weight_index((*wt)->get_cell_index());
-	  ws.set_weight_w(Ds); //Precisa corrigir Dw varia no AMR
+	  ws.set_weight_w(Ds); //Precisa corrigir MMQ
 	  lw.insert(lw.end(), ws);
 	}
       }
-      else{
+      else if(lvs->size() < 1){
 	Dp -= Ds;
       }
-      if(lve->size() != 0){
+      else{
+	for(list <cell *>::iterator wt = lvs->begin(); wt != lvs->end(); wt++){
+	  nl = (*wt)->get_cell_level();
+	}
+	if(nivel == nl){
+	  for(list <cell *>::iterator wt = lvs->begin(); wt != lvs->end(); wt++){
+	    ws.set_weight_index((*wt)->get_cell_index());
+	    ws.set_weight_w(Ds); 
+	    lw.insert(lw.end(), ws);
+	  }
+	}
+	else{
+	  printf("Nivel mais grosso - MMQ\n");
+	}
+      }
+      if(lve->size() > 1){
+	printf("Nivel mais fino - MMQ\n");
 	for(list <cell *>::iterator wt = lve->begin(); wt != lve->end(); wt++){
 	  we.set_weight_index((*wt)->get_cell_index());
-	  we.set_weight_w(De); //Precisa corrigir Dw varia no AMR
+	  we.set_weight_w(De); //Precisa corrigir MMQ
 	  lw.insert(lw.end(), we);
 	  
 	}
       }
-      else{
+      else if(lve->size() < 1){
 	Dp -= De;
       }
-      if(lvn->size() != 0){
+      else{
+	for(list <cell *>::iterator wt = lve->begin(); wt != lve->end(); wt++){
+	  nl = (*wt)->get_cell_level();
+	}
+	if(nivel == nl){
+	  for(list <cell *>::iterator wt = lve->begin(); wt != lve->end(); wt++){
+	    ws.set_weight_index((*wt)->get_cell_index());
+	    ws.set_weight_w(Ds); 
+	    lw.insert(lw.end(), ws);
+	  }
+	}
+	else{
+	  printf("Nivel mais grosso - MMQ\n");
+	}
+      }
+	
+      if(lvn->size() > 1){
+	printf("Nivel mais fino - MMQ\n");
 	for(list <cell *>::iterator wt = lvn->begin(); wt != lvn->end(); wt++){
 	  wn.set_weight_index((*wt)->get_cell_index());
 	  wn.set_weight_w(Dn); //Precisa corrigir Dw varia no AMR
 	  lw.insert(lw.end(), wn);
 	}
       }
-      else{
+      else if(lvn->size() < 1){
 	Dp -= Dn;
+      }
+      else{
+	for(list <cell *>::iterator wt = lvn->begin(); wt != lvn->end(); wt++){
+	  nl = (*wt)->get_cell_level();
+	}
+	if(nivel == nl){
+	  for(list <cell *>::iterator wt = lvn->begin(); wt != lvn->end(); wt++){
+	    wn.set_weight_index((*wt)->get_cell_index());
+	    wn.set_weight_w(Dn);
+	    lw.insert(lw.end(), wn);
+	  }
+	}
+	
+	else{
+	  printf("Nivel mais grosso - MMQ\n");
+	}
       }
       wp.set_weight_index((*it)->get_cell_index());
       wp.set_weight_w(Dp);
@@ -273,11 +361,11 @@ int main (int argc, char **args){
       
       (*it)->set_cell_wpoisson(lw);
       
-      //printf("Celula:\n");
-      //(*it)->print_cell();
-      //printf("pesos:\n");
-      //MP = (*it)->get_cell_wpoisson();
-      //M->print_weight_list(MP);
+      printf("Celula:\n");
+      (*it)->print_cell();
+      printf("pesos:\n");
+      MP = (*it)->get_cell_wpoisson();
+      M->print_weight_list(MP);
       lw.erase(lw.begin(),lw.end());
 
     }
