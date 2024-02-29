@@ -24,6 +24,7 @@ OPTIONS=-Wall -ansi -pedantic -Wno-unused-result -O3 -std=c++11
 LIBS= -L$(LIBRARY_PATH)/silo/lib -lsiloh5 -L$(LIBRARY_PATH)/hdf5/lib -lhdf5 -L$(LIBRARY_PATH)/zlib/lib -lz -lm
 
 all:
+	$(CC) $(OPTIONS) -c -I$(INCLUDE_PATH) $(SRC)/point.cpp -lm -o $(SRC)/point.o
 	$(CC) $(OPTIONS) -c -I$(INCLUDE_PATH) $(SRC)/particle.cpp -lm -o $(SRC)/particle.o
 	$(CC) $(OPTIONS) -c -I$(INCLUDE_PATH) $(SRC)/ode.cpp -lm -o $(SRC)/ode.o
 	$(CC) $(OPTIONS) -c -I$(INCLUDE_PATH) $(SRC)/weight.cpp -lm -o $(SRC)/weight.o
@@ -76,8 +77,11 @@ test3:
 	$(CC) -fPIC $(OPTIONS)  $(SRC)/particle.o $(SRC)/ode.o $(SRC)/weight.o $(SRC)/cell.o $(SRC)/double_cell.o $(SRC)/hash_table.o $(SRC)/double_hash_table.o $(SRC)/dominio.o $(SRC)/mesh.o $(TEST)/test.o $(LIBS) -o $(TEST)/test3 ${PETSC_VEC_LIB}
 
 test4:
+	$(CC) $(OPTIONS) -c -I$(INCLUDE_PATH) $(SRC)/point.cpp -lm -o $(SRC)/point.o
 	$(CC) $(OPTIONS) -c -I$(INCLUDE_PATH) $(SRC)/particle.cpp -lm -o $(SRC)/particle.o
 	$(CC) $(OPTIONS) -c -I$(INCLUDE_PATH) $(SRC)/ode.cpp -lm -o $(SRC)/ode.o
+	$(CC) $(OPTIONS) -c -I$(INCLUDE_PATH) $(SRC)/mls.cpp -lm -o $(SRC)/mls.o
+
 	$(CC) $(OPTIONS) -c -I$(INCLUDE_PATH) $(SRC)/weight.cpp -lm -o $(SRC)/weight.o
 	$(CC) $(OPTIONS) -c -I$(INCLUDE_PATH) $(SRC)/cell.cpp -lm -o $(SRC)/cell.o
 	$(CC) $(OPTIONS) -c -I$(INCLUDE_PATH) $(SRC)/double_cell.cpp -lm -o $(SRC)/double_cell.o
@@ -87,6 +91,20 @@ test4:
 	$(CC) $(OPTIONS) -c -I$(INCLUDE_PATH) -I$(INCLUDE_SILO_PATH) $(SRC)/mesh.cpp -lm -o $(SRC)/mesh.o
 	$(CC) $(OPTIONS) -c $(PETSC_FLAGS) -I$(INCLUDE_PATH) -I$(INCLUDE_SILO_PATH) $(TEST)/test_LaplaceAMR.cpp -lm -o $(TEST)/test.o ${PETSC_KSP_LIB}
 	$(CC) -fPIC $(OPTIONS)  $(SRC)/particle.o $(SRC)/ode.o $(SRC)/weight.o $(SRC)/cell.o $(SRC)/double_cell.o $(SRC)/hash_table.o $(SRC)/double_hash_table.o $(SRC)/dominio.o $(SRC)/mesh.o $(TEST)/test.o $(LIBS) -o $(TEST)/test4 ${PETSC_VEC_LIB}
+
+test5:
+	$(CC) $(OPTIONS) -c -I$(INCLUDE_PATH) $(SRC)/particle.cpp -lm -o $(SRC)/particle.o
+	$(CC) $(OPTIONS) -c -I$(INCLUDE_PATH) $(SRC)/ode.cpp -lm -o $(SRC)/ode.o
+	$(CC) $(OPTIONS) -c -I$(INCLUDE_PATH) $(SRC)/weight.cpp -lm -o $(SRC)/weight.o
+	$(CC) $(OPTIONS) -c -I$(INCLUDE_PATH) $(SRC)/cell.cpp -lm -o $(SRC)/cell.o
+	$(CC) $(OPTIONS) -c -I$(INCLUDE_PATH) $(SRC)/double_cell.cpp -lm -o $(SRC)/double_cell.o
+	$(CC) $(OPTIONS) -c -I$(INCLUDE_PATH) $(SRC)/hash_table.cpp -lm -o $(SRC)/hash_table.o
+	$(CC) $(OPTIONS) -c -I$(INCLUDE_PATH) $(SRC)/double_hash_table.cpp -lm -o $(SRC)/double_hash_table.o
+	$(CC) $(OPTIONS) -c -I$(INCLUDE_PATH) $(SRC)/dominio.cpp -lm -o $(SRC)/dominio.o
+	$(CC) $(OPTIONS) -c -I$(INCLUDE_PATH) -I$(INCLUDE_SILO_PATH) $(SRC)/mesh.cpp -lm -o $(SRC)/mesh.o
+	$(CC) $(OPTIONS) -c $(PETSC_FLAGS) -I$(INCLUDE_PATH) -I$(INCLUDE_SILO_PATH) $(TEST)/exemplo_QR.cpp -lm -o $(TEST)/test.o ${PETSC_KSP_LIB}
+	$(CC) -fPIC $(OPTIONS)  $(SRC)/particle.o $(SRC)/ode.o $(SRC)/weight.o $(SRC)/cell.o $(SRC)/double_cell.o $(SRC)/hash_table.o $(SRC)/double_hash_table.o $(SRC)/dominio.o $(SRC)/mesh.o $(TEST)/test.o $(LIBS) -o $(TEST)/test5 ${PETSC_VEC_LIB}
+
 
 gdb:
 	$(CC) $(OPTIONS) -c -g -I$(INCLUDE_PATH) $(SRC)/particle.cpp -lm -o $(SRC)/particle.o
