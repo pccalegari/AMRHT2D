@@ -4,6 +4,7 @@
 #include <cmath>
 #include <ctime>
 #include "mls.h"
+#include "point.h"
 
 using namespace std;
 
@@ -69,3 +70,12 @@ double max_var(vector <double> var){
   return maxvar;
 }
 
+/*void mls::pesos_inter_diag(point p, cell c){
+  
+  q = new point(0,0);
+  double h1 = dist(p, q);
+  //double h2 = dist(p, r);
+}
+
+*/  
+  

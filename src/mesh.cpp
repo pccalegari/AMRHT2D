@@ -268,6 +268,131 @@ void mesh::create_unstructured_mesh(double (* f) (double x, double y, double t),
   
 }
 
+void mesh::create_nongraded_mesh() {
+  //4 pontos para cada celula (haverá pontos para duas ou mais células, com isso, o fator de carga de internal_HT será menor que 1
+  //int x, y;
+  //int count = 0;
+  double xd, yd, dx, dy;
+  vector <double> ptx;
+  vector <double> pty;
+  vector <int> verticeslist;
+  //int number_node = 1;
+  double_cell * cs [4];
+  double_cell * c, * cmiddle;
+  //por enquanto as variáveis abaixo (a, b, delta_0) descrevem o domínio. (a,b) é o ponto onde começa o domínio e delta_0 é o fator de discretização no nível mais grosso (nível 0)
+  double xbegin, ybegin, xend, yend;
+  xbegin = get_dominio()->get_xbegin();
+  ybegin = get_dominio()->get_ybegin();
+  xend = get_dominio()->get_xend();
+  yend = get_dominio()->get_yend();
+
+  /****************SHAPE OR ZONES OR CELL ARE THE SAME*************************/
+  int ncells = H->get_number_cell();
+  int * celltypes = (int *) malloc (sizeof(int) * ncells);
+  int * cellsizes = (int *) malloc (sizeof(int) * ncells);
+  int * cellcnt = (int *) malloc (sizeof(int) * ncells); // I still confuse about the mean of this variable
+  double * cellmiddles = (double *) malloc (sizeof(double) * ncells);
+  //double * rhs = (double *) malloc (sizeof(double) * ncells);
+  /****************************************************************************/
+  
+  double_hash_table * internal_HT = new double_hash_table(4 * H->get_number_cell());
+
+  int nzones = 0;
+  for (int i = 0; i < number_of_levels; i++) {
+    //printf ("Nível: %d\n", i);
+    dx = fabs(xend - xbegin) / (nxb * pow(2, i));
+    dy = fabs(yend - ybegin) / (nyb * pow(2, i));
+    for (list <cell *>::iterator it = l->at(i)->begin(); it != l->at(i)->end(); it++) {
+      //cout << "(" << (*it)->get_cell_x() << ", " << (*it)->get_cell_y() << "): " << (*it)->get_cell_level() << endl;
+      xd = xbegin + ((*it)->get_cell_x() * dx);//(delta_0 / pow(2, i)));
+      yd = ybegin + ((*it)->get_cell_y() * dy);//(delta_0 / pow(2, i)));
+      
+      //clock or counter-clock
+      cs[0] = new double_cell (xd, yd, dx, dy);
+      cs[1] = new double_cell (xd, yd + dy, dx, dy);
+      cs[2] = new double_cell (xd + dx, yd + dy, dx, dy);
+      cs[3] = new double_cell (xd + dx, yd, dx, dy); 
+      cmiddle = new double_cell (xd + (dx / 2.), yd + (dy / 2.), 0., 0.);
+      //count++;//conta o número de células
+
+      for (int j = 0; j < 4; j++) {
+	c = internal_HT->search(cs[j]->get_double_cell_x(), cs[j]->get_double_cell_y());
+	if (c == NULL) {
+	  internal_HT->insert(cs[j]);
+	  ptx.push_back(cs[j]->get_double_cell_x());
+	  pty.push_back(cs[j]->get_double_cell_y());
+	  cs[j]->set_double_cell_pointer_to_vector(ptx.size() - 1);
+	  c = cs[j];
+	}
+	else {
+	  delete cs[j];
+	}
+	verticeslist.push_back(c->get_double_cell_pointer_to_vector());
+      }
+      //add a ZONE related to the four dots cs[0], cs[1], cs[2] and cs[3]
+      celltypes[nzones] = DB_ZONETYPE_QUAD;
+      cellsizes[nzones] = 4;
+      cellcnt[nzones] = 1;
+      //cellmiddles[nzones] = (*f)(cmiddle->get_double_cell_x(), cmiddle->get_double_cell_y(), tempo);
+      //rhs[nzones] = (*df)(cmiddle->get_double_cell_x(), cmiddle->get_double_cell_y());
+      delete cmiddle;
+      nzones++;
+    }
+  }
+
+  assert (nzones == ncells);
+
+  /********************silo code*******************************/
+  DBfile *dbfile = NULL;
+  /* Open the Silo file */
+  char palavra [100];
+  for (int i = 0; i < 100; i++)
+    palavra[0] = '\0';
+  sprintf(palavra,"/home/priscila/Documentos/Pesquisa/Codes/AMRHT2D-Poisson/data/basic%4.3lf.silo", 1234.0);
+  
+  dbfile = DBCreate(palavra, DB_CLOBBER, DB_LOCAL,"Comment about the data", DB_HDF5);
+  if(dbfile == NULL)
+    {
+      fprintf(stderr, "Could not create Silo file!\n");
+      fprintf(stderr, "Change 'palavra' in src/mesh.cpp!\n");  
+      exit(0);
+    }
+  
+  /* Add other Silo calls here. */
+  int * verticeslistC = &(verticeslist[0]);
+  
+  double * coords [2];
+  coords[0] = (double *) malloc (sizeof(double) * ptx.size());
+  coords[1] = (double *) malloc (sizeof(double) * ptx.size());
+  for (unsigned int i = 0; i < ptx.size(); i++){
+    coords[0][i] = ptx[i];
+    coords[1][i] = pty[i];
+  }
+  
+  int lverticeslistC = sizeof(int) * verticeslist.size() / sizeof(int);
+  
+  int nnodes = ptx.size();
+  
+  int ndims = 2;
+
+  DBPutZonelist2 (dbfile, "zonelist", nzones, ndims, verticeslistC, lverticeslistC, 0, 0, 0, celltypes, cellsizes, cellcnt, ncells, NULL);
+  DBPutUcdmesh (dbfile, "meshBLA", ndims, NULL, coords, nnodes, nzones, "zonelist", NULL, DB_DOUBLE, NULL);
+  assert(DBPutUcdvar1 (dbfile, "cellmiddles", "meshbBLA", cellmiddles, nzones, NULL, 0, DB_DOUBLE, DB_ZONECENT, NULL) == 0);
+  //assert(DBPutUcdvar1 (dbfile, "f", "meshBLA", cellmiddles, nzones, NULL, 0, DB_DOUBLE, DB_ZONECENT, NULL) == 0);
+
+  //assert(DBPutUcdvar1 (dbfile, "rhs", "meshBLA", cellmiddles, nzones, NULL, 0, DB_DOUBLE, DB_ZONECENT, NULL) == 0);
+      
+  /* Close the Silo file. */
+  DBClose(dbfile);  
+  /************************************************************/
+
+  
+
+  //TODO
+  internal_HT->clean();
+  
+}
+
 void mesh::print_silo(int ct, list <particle *> * P) {
   //4 pontos para cada celula (haverá pontos para duas ou mais células, com isso, o fator de carga de internal_HT será menor que 1
   //int x, y;
@@ -1155,7 +1280,7 @@ int mesh::counting_mesh_cell(){
   for (int i = 0; i < number_of_levels; i++) {
     for (list <cell *>::reverse_iterator it = l->at(i)->rbegin(); it != l->at(i)->rend(); it++) {
       (*it)->set_cell_index(ncell);      
-      //(*it)->print_cell();
+      (*it)->print_cell();
       ncell++;
     }
   }
