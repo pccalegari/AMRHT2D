@@ -86,6 +86,7 @@ class mesh {
   void rhs_dirichlet_boundary_conditions (double (*f) (double x, double y), vector<double> * fvalue);
   
   void create_unstructured_mesh(double (* f) (double x, double y, double t), double tempo);
+  void create_nongraded_mesh();
   void print_silo(int ct, list <particle *> *P);
   void initialize_var(double (* u) (double x, double y, double t), double (* v) (double x, double y, double t), double (*phi) (double x, double y, double t), double tempo, double tempo0);
   vector <double> max_propriedades();
