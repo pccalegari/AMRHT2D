@@ -16,5 +16,5 @@ class weight {
   double get_weight_w();
   void set_weight_index(int index);
   void set_weight_w(double w);
- 
+  void add_weight_w(double w);
 };
