@@ -23,6 +23,10 @@ void weight::set_weight_index(int index){
 }
 
 void weight::set_weight_w(double wp){
+  w = wp;
+}
+
+void weight::add_weight_w(double wp){
   w += wp;
 }
 
