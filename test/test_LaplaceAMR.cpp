@@ -32,7 +32,28 @@ double distance(double px, double py, double qx, double qy){
   double d = sqrt((px - qx)*(px - qx) + (py - qy)*(py - qy));
   return d;
 }
-  
+
+cell * busca_vizinha(int j, list <cell *> * lv) {
+  cell * c = NULL;
+  list <cell *>::iterator it;
+  it = lv->begin(); 
+  while(it != lv->end() && (*it)->get_cell_y() != j)
+    it++;
+  c = (*it);
+  return c;
+}
+
+/*weight * busca_peso(int j, list <weight> *lv) {
+  list <weight >::iterator it;
+  weight ww;
+  it = lv->begin();
+  while(it != lv->end() && (it)->get_weight_index() != j)
+    it++;
+  ww = (it);
+  return ww;
+}
+*/
+
 //extern PetscErrorCode ComputeMatrix(KSP, Mat, Mat, void *);
 //extern PetscErrorCode ComputeRHS(KSP, Vec, void *);
 //extern PetscErrorCode ComputeInitialGuess(KSP, Vec, void *);
@@ -44,7 +65,8 @@ int main (int argc, char **args){
   int number_of_levels = 2, nxb = 4, nyb = 4;
   int ncell, nivel, nl;
   dominio *D;
-  point *p, *q, *s;
+  cell * c1, * c2;
+  
   double xbegin, ybegin, xend, yend;
   xbegin = ybegin = 0.0;
   xend = yend = 1.0;
@@ -227,10 +249,10 @@ int main (int argc, char **args){
       nivel = (*it)->get_cell_level();
       xd = xbegin + (i + 0.5) * dx;
       yd = ybegin + (j + 0.5) * dy;
-      xe = xd + 0.5*dx;
-      xw = xd - 0.5*dx;
-      yn = yd + 0.5*dy;
-      ys = yd - 0.5*dy;
+      xe = xd + dx;
+      xw = xd - dx;
+      yn = yd + dy;
+      ys = yd - dy;
       De = -Dif(xe, yd)/dx2;
       Dw = -Dif(xw, yd)/dx2;
       Ds = -Dif(xd, ys)/dy2;
@@ -241,41 +263,111 @@ int main (int argc, char **args){
       lvn = (*it)->get_cell_lbn();
             
       Dp = -(De + Dw + Ds + Dn);
-           
+     
       if(lvw->size() > 1){
-	printf("Nivel mais fino - Precisa corrigir se nivel mais fino > 2");
 	list <cell *>::iterator wt = lvw->begin();
 	nl = (*wt)->get_cell_level();
-	for(wt = lvw->begin(); wt != lvw->end(); wt++){
-	  ww.set_weight_index((*wt)->get_cell_index());
-	  double dxv = fabs(xend - xbegin) / (nxb * pow(2, (*wt)->get_cell_level()));
-	  xa = xbegin + ((*wt)->get_cell_x() + 0.5) * dxv;
-	  h1 = distance(xw, yd, xa, yd);
-	  h2 = distance(xd, yd, xa, yd);
-	  ww.set_weight_w(Dw*(h1 + h2)/2.0); //Peso vem do MMQ
-	  lw.insert(lw.end(), ww);
-	}
+	double dxv = fabs(xend - xbegin) / (nxb * pow(2, nl));
+	double dyv = fabs(yend - ybegin) / (nyb * pow(2, nl));
+	int jv = floor(yd/dyv);
+	c1 = busca_vizinha(jv, lvw);
+	ww.set_weight_index(c1->get_cell_index());
+	xa = xbegin + ((*wt)->get_cell_x() + 0.5) * dxv;
+	h1 = distance(xw, yd, xa, yd);
+	h2 = distance(xd, yd, xa, yd);
+	ww.set_weight_w(Dw*(h1 + h2)/(h2*2.0)); //Peso vem do MMQ
+	lw.insert(lw.end(), ww);
+	Dp -= Dw*(h1/h2);
+	jv = floor((yd - dyv)/dyv);
+	c2 = busca_vizinha(jv, lvw);
+	ww.set_weight_index(c2->get_cell_index());
+	ww.set_weight_w(Dw*(h1 + h2)/(h2*2.0)); //Peso vem do MMQ
+	lw.insert(lw.end(), ww);
       }
       else if(lvw->size() < 1){
 	Dp -= Dw;
       }
       else{
-	for(list <cell *>::iterator wt = lvw->begin(); wt != lvw->end(); wt++){
-	  nl = (*wt)->get_cell_level();
-	}
+	list <cell *>::iterator wt = lvw->begin();
+	nl = (*wt)->get_cell_level();
 	if(nivel == nl){
-	  for(list <cell *>::iterator wt = lvw->begin(); wt != lvw->end(); wt++){
-	    ww.set_weight_index((*wt)->get_cell_index());
-	    ww.set_weight_w(Dw);
-	    lw.insert(lw.end(), ww);	  
-	  }
+	  ww.set_weight_index((*wt)->get_cell_index());
+	  ww.set_weight_w(Dw);
+	  lw.insert(lw.end(), ww);	  
 	}
 	else{
+	  (*it)->print_cell();
 	  printf("Nivel mais grosso - MMQ\n");
+	  
+	  if((*it)->get_cell_y()%2 == 0){
+	    list <cell *>::iterator st = lvs->begin();
+	    int ns = (*st)->get_cell_level();
+	    double dxs = fabs(xend - xbegin) / (nxb * pow(2, ns));
+	    double dys = fabs(yend - ybegin) / (nyb * pow(2, ns));
+	    int iv = floor((xd - 0.5*dx)/dxs);
+	    c1 = busca_vizinha(iv, lvs);
+	    c1->print_cell();
+	    list <cell *>::iterator wt = lvw->begin();
+	    int nw = (*wt)->get_cell_level();
+	    double dxw = fabs(xend - xbegin) / (nxb * pow(2, nw));
+	    double dyw = fabs(yend - ybegin) / (nyb * pow(2, nw));
+	    ww.set_weight_index(c1->get_cell_index());
+	    double xxs = xbegin + ((*st)->get_cell_x() + 0.5) * dxs;
+	    double yys = ybegin + ((*st)->get_cell_y() + 0.5) * dys;
+	    double xxw = xbegin + ((*wt)->get_cell_x() + 0.5) * dxw;
+	    double yyw = ybegin + ((*wt)->get_cell_y() + 0.5) * dyw;
+	    h1 = distance(xw, yd, xxw, yyw);
+	    h2 = distance(xw, yd, xxs, yys);
+	    ww.set_weight_w(Dw*h1/(h1 + h2)); //Peso vem do MMQ
+	    lw.insert(lw.end(), ww);
+	    ww.set_weight_index((*wt)->get_cell_index());
+	    ww.set_weight_w(Dw*h2/(h1 + h2)); //Peso vem do MMQ
+	    lw.insert(lw.end(), ww);	    
+	  }
+	  else{
+	    list <cell *>::iterator nt = lvn->begin();
+	    int nn = (*nt)->get_cell_level();
+	    double dxn = fabs(xend - xbegin) / (nxb * pow(2, nn));
+	    double dyn = fabs(yend - ybegin) / (nyb * pow(2, nn));
+	    int iv = floor((xd - 0.5*dx)/dxn);
+	    c1 = busca_vizinha(iv, lvn);
+	    c1->print_cell();
+	    list <cell *>::iterator wt = lvw->begin();
+	    int nw = (*wt)->get_cell_level();
+	    double dxw = fabs(xend - xbegin) / (nxb * pow(2, nw));
+	    double dyw = fabs(yend - ybegin) / (nyb * pow(2, nw));
+	    double xxn = xbegin + ((*nt)->get_cell_x() + 0.5) * dxn;
+	    double yyn = ybegin + ((*nt)->get_cell_y() + 0.5) * dyn;
+	    double xxw = xbegin + ((*wt)->get_cell_x() + 0.5) * dxw;
+	    double yyw = ybegin + ((*wt)->get_cell_y() + 0.5) * dyw;
+	    h1 = distance(xw, yd, xxw, yyw);
+	    h2 = distance(xw, yd, xxn, yyn);
+	    ww.set_weight_index(c1->get_cell_index());
+	    ww.set_weight_w(Dw*h1/(h1 + h2)); //Peso vem do MMQ
+	    lw.insert(lw.end(), ww);
+	    ww.set_weight_index((*wt)->get_cell_index());
+	    ww.set_weight_w(Dw*h2/(h1 + h2)); //Peso vem do MMQ
+	    //printf("%d %d\n", c1->get_cell_index(), (*wt)->get_cell_index());
+	    //printf("%f %f\n", Dw*h2/(h1 + h2), Dw*h1/(h1 + h2));
+	    lw.insert(lw.end(), ww);
+	    
+	  }
 	}
       }
       if(lvs->size() > 1){
-	printf("Nivela mais fino - MMQ\n");
+	printf("Nivel mais fino - MMQ\n");
+	list <cell *>::iterator wt = lvw->begin();
+	/*nl = (*wt)->get_cell_level();
+	for(wt = lvs->begin(); wt != lvs->end(); wt++){
+	  ww.set_weight_index((*wt)->get_cell_index());
+	  double dxv = fabs(yend - ybegin) / (nyb * pow(2, nl));
+	  ya = xbegin + ((*wt)->get_cell_x() + 0.5) * dxv;
+	  h1 = distance(xw, yd, xa, yd);
+	  h2 = distance(xd, yd, xa, yd);
+	  //printf("%f %f\n", h1, h2);
+	  ww.set_weight_w(Dw*(h1 + h2)/(h2*2.0)); //Peso vem do MMQ
+	  lw.insert(lw.end(), ww);
+	  Dp -= Dw*(h1/h2);*/
 	for(list <cell *>::iterator wt = lvs->begin(); wt != lvs->end(); wt++){
 	  ws.set_weight_index((*wt)->get_cell_index());
 	  ws.set_weight_w(Ds); //Precisa corrigir MMQ
@@ -340,11 +432,19 @@ int main (int argc, char **args){
 	Dp -= Dn;
       }
       else{
-	for(list <cell *>::iterator wt = lvn->begin(); wt != lvn->end(); wt++){
-	  nl = (*wt)->get_cell_level();
-	}
+	list <cell *>::iterator wt = lvn->begin();
+	nl = (*wt)->get_cell_level();
 	if(nivel == nl){
-	  for(list <cell *>::iterator wt = lvn->begin(); wt != lvn->end(); wt++){
+	  int pa = 0;
+	  for(list <weight>::iterator wwt = lw.begin(); wwt != lw.end(); wwt++){
+	    int i = (*wt)->get_cell_index();
+	    int j = wwt->get_weight_index();
+	    if(i == j){
+	      wwt->add_weight_w(Dn);
+	      pa = 1;
+	    }
+	  }
+	  if(pa == 0){
 	    wn.set_weight_index((*wt)->get_cell_index());
 	    wn.set_weight_w(Dn);
 	    lw.insert(lw.end(), wn);
@@ -395,10 +495,10 @@ int main (int argc, char **args){
       iglobal = (*it)->get_cell_index();
      
       MP = (*it)->get_cell_wpoisson();
-      printf("Celula:\n");
-      (*it)->print_cell();
-      printf("pesos:\n");
-      M->print_weight_list(MP);
+      //printf("Celula:\n");
+      //(*it)->print_cell();
+      //printf("pesos:\n");
+      //M->print_weight_list(MP);
       j = 0;
       //printf("%d %d\n",iglobal, j);
       for(list <weight>::iterator wt = MP.begin(); wt != MP.end(); wt++){
