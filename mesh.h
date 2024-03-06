@@ -39,10 +39,10 @@ class mesh {
     Devolve uma lista com seu(s) vizinho(s). Essa lista NÃO PODE SER NULA.*/
   list <cell *> * left_finest_or_same_level_neighbours (cell * c, int level_k);
 
-  void left_neighbours (cell * c, list <cell *> * nb);
-  void right_neighbours (cell * c, list <cell *> * nb);
-  void up_neighbours (cell * c, list <cell *> * nb);
-  void down_neighbours (cell * c, list <cell *> * nb);
+  int left_neighbours (cell * c, list <cell *> * nb);
+  int right_neighbours (cell * c, list <cell *> * nb);
+  int up_neighbours (cell * c, list <cell *> * nb);
+  int down_neighbours (cell * c, list <cell *> * nb);
 
   void left_neighbours_fd (cell * c, list <cell *> * nb);
   void right_neighbours_fd (cell * c, list <cell *> * nb);

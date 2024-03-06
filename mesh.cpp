@@ -159,7 +159,7 @@ void mesh::create_unstructured_mesh(double (* f) (double x, double y, double t),
       xd = xbegin + ((*it)->get_cell_x() * dx);//(delta_0 / pow(2, i)));
       yd = ybegin + ((*it)->get_cell_y() * dy);//(delta_0 / pow(2, i)));
       
-      //clock or counter-clock
+     //clock or counter-clock
       cs[0] = new double_cell (xd, yd, dx, dy);
       cs[1] = new double_cell (xd, yd + dy, dx, dy);
       cs[2] = new double_cell (xd + dx, yd + dy, dx, dy);
@@ -513,12 +513,12 @@ list <cell *> * mesh::left_finest_or_same_level_neighbours(cell * c, int level_k
   return l;
 }
 
-void mesh::left_neighbours (cell * c, list <cell *> * nb) {
+int mesh::left_neighbours (cell * c, list <cell *> * nb) {
   int x = c->get_cell_x();
   int y = c->get_cell_y();
   int level = c->get_cell_level();
   int xl, yl;
-  
+  int n = 0;
   if (x != 0) {
     int l;
     if (x % 2 == 0){
@@ -530,6 +530,7 @@ void mesh::left_neighbours (cell * c, list <cell *> * nb) {
 	cell * found = H->search (xl, yl, l);
 	if (found != NULL) {
 	  nb->insert (nb->end(), found);
+	  n++;
 	  //cout << "FOUND in coarser" << endl;
 	  //printf ("L.: (%d, %d): %d)\n", xl, yl, l);
 	  break;
@@ -547,6 +548,7 @@ void mesh::left_neighbours (cell * c, list <cell *> * nb) {
 	    cell * found = H->search (xl, yl, l);
 	    if (found != NULL) {
 	      nb->insert (nb->end(), found);
+	      n++;
 	      ///cout << "FOUND in finer" << endl;
 	      //printf ("L.: (%d, %d): %d)\n", xl, yl, l);
 	    }
@@ -555,17 +557,18 @@ void mesh::left_neighbours (cell * c, list <cell *> * nb) {
       }
     }
   }
-  else{
+  return n;
+  //else{
     
-  }
+  //}
 }
 
-void mesh::right_neighbours (cell * c, list <cell *> * nb) {
+int mesh::right_neighbours (cell * c, list <cell *> * nb) {
   int x = c->get_cell_x();
   int y = c->get_cell_y();
   int level = c->get_cell_level();
   int xl, yl;
-    
+  int n = 0;
   if (x != nxb*pow(2,level)) {
     int i;
     if (x % 2 == 1){
@@ -577,6 +580,7 @@ void mesh::right_neighbours (cell * c, list <cell *> * nb) {
 	cell * found = H->search (xl, yl, i);
 	if (found != NULL) {
 	  nb->insert (nb->end(), found);
+	  n++;
 	  //cout << "FOUND in coarser" << endl;
 	  //printf ("R.: (%d, %d): %d)\n", xl, yl, i);
 	  break;
@@ -593,6 +597,7 @@ void mesh::right_neighbours (cell * c, list <cell *> * nb) {
 	  cell * found = H->search (xl, yl, i);
 	  if (found != NULL) {
 	    nb->insert (nb->end(), found);
+	    n++;
 	    //cout << "FOUND in finer" << endl;
 	    //printf ("R.: (%d, %d): %d)\n", xl, yl, i);
 	  }
@@ -600,14 +605,15 @@ void mesh::right_neighbours (cell * c, list <cell *> * nb) {
       }
     }
   }
+  return n;
 }
 
-void mesh::down_neighbours (cell * c, list <cell *> * nb) {
+int mesh::down_neighbours (cell * c, list <cell *> * nb) {
   int x = c->get_cell_x();
   int y = c->get_cell_y();
   int level = c->get_cell_level();
   int xl, yl;
-  
+  int n = 0;
   if (y != 0) {
     int i;
     if (y % 2 == 0){
@@ -619,6 +625,7 @@ void mesh::down_neighbours (cell * c, list <cell *> * nb) {
 	cell * found = H->search (xl, yl, i);
 	if (found != NULL){
 	  nb->insert (nb->end(), found);
+	  n++;
 	  //found = H->search(xl-1, yl, i);
 	  //if(found != NULL){
 	  //  nb->insert(nb->begin(), found);
@@ -645,6 +652,7 @@ void mesh::down_neighbours (cell * c, list <cell *> * nb) {
 	  cell * found = H->search (xl, yl, i);
 	  if (found != NULL) {
 	    nb->insert (nb->end(), found);
+	    n++;
 	    //cout << "FOUND in finer" << endl;
 	    //printf ("D.: (%d, %d): %d)\n", xl, yl, i);
 	    //found = H->search (xl-1, yl, i);
@@ -662,15 +670,15 @@ void mesh::down_neighbours (cell * c, list <cell *> * nb) {
       }
     }
   }
-  
+  return n;
 }
 
-void mesh::up_neighbours (cell * c, list <cell *> * nb) {
+int mesh::up_neighbours (cell * c, list <cell *> * nb) {
   int x = c->get_cell_x();
   int y = c->get_cell_y();
   int level = c->get_cell_level();
   int xl, yl;
-    
+  int n = 0; 
   if (y != nyb*pow(2,level)) {
     int i;
     if (y % 2 == 1){
@@ -682,6 +690,7 @@ void mesh::up_neighbours (cell * c, list <cell *> * nb) {
 	cell * found = H->search (xl, yl, i);
 	if (found != NULL) {
 	  nb->insert (nb->end(), found);
+	  n++;
 	  //found = H->search(xl-1, yl, i);
 	  //if(found != NULL){
 	  //  nb->insert(nb->begin(), found);
@@ -708,6 +717,7 @@ void mesh::up_neighbours (cell * c, list <cell *> * nb) {
 	  cell * found = H->search (xl, yl, i);
 	  if (found != NULL) {
 	    nb->insert (nb->end(), found);
+	    n++;
 	    //found = H->search (xl-1, yl, i);
 	    //if (found != NULL) {
 	    //  nb->insert (nb->begin(), found);
@@ -725,17 +735,20 @@ void mesh::up_neighbours (cell * c, list <cell *> * nb) {
       }
     }
   }
- 
+  return n;
 }
 
 list <cell *> * mesh::neighbours (cell * c) {
   list <cell *> * nb = new list <cell*>;
-  this->left_neighbours(c, nb);
-  this->down_neighbours(c, nb);
-  this->right_neighbours(c, nb);
-  this->up_neighbours(c, nb);
+  int nw = this->left_neighbours(c, nb);
+  c->set_cell_nvw(nw);
+  int ns = this->down_neighbours(c, nb);
+  c->set_cell_nvs(ns);
+  int ne = this->right_neighbours(c, nb);
+  c->set_cell_nve(ne);
+  int nn = this->up_neighbours(c, nb);
+  c->set_cell_nvn(nn);
   nb->insert(nb->begin(), c);
-
   return nb;
 }
 

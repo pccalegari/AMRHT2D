@@ -36,6 +36,24 @@ void print_matrix(double **A, int m, int n){
   }
 }
 
+double ** multiplicaAB(double ** A, double **B, int m, int n){
+  double ** U;
+  U = (double **) malloc(m * sizeof(double *));
+  for(int i = 0; i < m; i++)
+    U[i] = (double *) malloc(n * sizeof(double));
+  double soma;
+  for(int i = 0; i < m; i++){
+    for(int j = 0; j < n; j++){
+      soma = 0.0;
+      for(int k = 0; k < m; k++){
+	soma += A[i][k]*B[k][j];
+      }
+      U[i][j] = soma;
+    }
+  }
+  return U;
+}
+
 double distance(double px, double py, double qx, double qy){
   double d = sqrt((px - qx)*(px - qx) + (py - qy)*(py - qy));
   return d;
@@ -74,6 +92,16 @@ double delta_inter(double x, double y, list <cell *> * lv, mesh *M){
   }
   
   return peso;
+}
+
+double delta_s2(double r){
+  double delta = 0.0;
+  r = fabs(r);
+  if(r >= 0.0 && r < 1.0)
+    delta = (1.0/8.0)*(3.0 - 2.0*r + sqrt(1.0 + 4.0*r - 4.0*r*r));
+  else if(r >= 1.0 && r <= 2.0)
+    delta = (1.0/8.0)*(5.0 - 2.0*r - sqrt(12.0*r - 7.0 - 4.0*r*r));
+  return delta;
 }
 
 double weight_mls(double x, double y, double xp, double yp){
@@ -152,15 +180,15 @@ void qr(double ** A, int m, int n, double **Q, double **R){
   
 }
 
-void peso(double xp, double yp, list <cell *> lv, mesh * M, int * index, double * mls){
-  double * w, ** A, ** Q, **QQ, ** R, ** RR, * phi, * ya;
+void peso(double xp, double yp, list <cell *> *lv, mesh * M, int * index, double * mls){
+  double * w, ** A, ** Q, **QQ, ** R, ** RR, ** B, * phi, * ya;
   int m, k, nl, i, j, nxb, nyb, n;
   //n tamanho da base: n = 3 temos {1, x, y}; n=6 temos {1, x, y, x*x, x*y, y*y}
   double dx, dy, xv, yv, xe, ye, xb, yb;
   dominio * D;
   k = 0;
   n = 3;
-  m = lv.size();
+  m = lv->size();
   w = (double *)malloc(m * sizeof(double));
   phi = (double *)malloc(n * sizeof(double));
   ya = (double *)malloc(n * sizeof(double));
@@ -187,16 +215,20 @@ void peso(double xp, double yp, list <cell *> lv, mesh * M, int * index, double 
   ye = D->get_yend();
   nxb = M->get_nxb();
   nyb = M->get_nyb();
-  
-  for(list <cell *>::iterator it = lv.begin(); it != lv.end(); it++){
+  list <cell *>::iterator it = lv->begin();
+  double h = max(fabs(xe - xb)/(nxb * pow(2, (*it)->get_cell_level())), fabs(ye - yb)/(nyb * pow(2, (*it)->get_cell_level())));
+  for(it = lv->begin(); it != lv->end(); it++){
     nl = (*it)->get_cell_level();
     i = (*it)->get_cell_x();
     j = (*it)->get_cell_y();
+    
+    dy = fabs(ye - yb)/(nyb * pow(2, nl));
     dx = fabs(xe - xb)/(nxb * pow(2, nl));
     dy = fabs(ye - yb)/(nyb * pow(2, nl));
     xv = xb + (i + 0.5)*dx;
     yv = yb + (j + 0.5)*dy;
-    w[k] = weight_mls(xp, yp, xv, yv);
+    double r = sqrt((xv - xp)*(xv - xp) +(yv - yp)*(yv - yp))/h;
+    w[k] = delta_s2(r);//1.0;//weight_mls(xp, yp, xv, yv);
     index[k] = (*it)->get_cell_index();
     //matriz WA
     A[k][0] = w[k];
@@ -205,7 +237,11 @@ void peso(double xp, double yp, list <cell *> lv, mesh * M, int * index, double 
     k++;
   }
   print_matrix(A, m, n);
+  printf("\n");
   qr(A, m, n, Q, R);
+  B = multiplicaAB(Q, R, m, n);
+  printf("\n");
+  print_matrix(B, m, n);
   for(k = 0; k < m; k++)
     for(int l = 0; l < n; l++)
       QQ[k][l] = Q[k][l];
@@ -226,8 +262,13 @@ void peso(double xp, double yp, list <cell *> lv, mesh * M, int * index, double 
   phi[0] = 1.0;
   phi[1] = xp;
   phi[2] = yp;
+  printf("%f %f %f\n", phi[0], phi[1], phi[2]);
   ya = subst_direta(RR, phi, n);
+  printf("%f %f %f\n", ya[0], ya[1], ya[2]);
   mls = peso_mls(QQ, w, ya, m, n);
+  for(int i = 0; i < m; i++)
+    printf("%f\t", mls[i]);
+  printf("\n");
   
   for(int i = 0; i < m; i++)
     free(QQ[i]);
@@ -243,16 +284,19 @@ void peso(double xp, double yp, list <cell *> lv, mesh * M, int * index, double 
   free(ya);
   
 }
-
-int busca(int x, list <weight> * lw){
-  int k;
-  k = lw->size() - 1;
-  wn.set_weight_index((*wt)->get_cell_index());
-  while(k >= 0 && lw->get_weight_index() != x)
-    k -= 1;
-  return k;
+/*
+weight busca(int x, list <weight> lw){
+  list <weight>::iterator k = lw.begin();
+  weight ww;
+  while(k != lw.end() && k->get_weight_index() != x)
+    k++;
+  if(k != lw.end())
+    ww = NULL;
+  else
+    ww = k;
+  return ww;
 }
-
+*/
 /*
 void insere_peso_mls(int * index, double * mls, int m, list <weight> * lw) {
   weight ww;
@@ -292,7 +336,7 @@ int main (int argc, char **args){
   list <cell *> *l;
   list <weight> MP;
   list <weight>::iterator wt;
-  list <cell *> * lvw, * lve, * lvn, * lvs, lv;
+  list <cell *> * lvw, * lve, * lvn, * lvs, lvv;
   list <cell *>::iterator it, kt;
   double w2[5];
   double * mls;
@@ -371,9 +415,11 @@ int main (int argc, char **args){
       (*it)->set_cell_lbe(M->neighbours_e(*it));
       (*it)->set_cell_lbn(M->neighbours_n(*it));
       (*it)->set_cell_lbs(M->neighbours_s(*it));
+      (*it)->set_cell_lv(M->neighbours(*it));
       //printf("Celula:\n");
       //(*it)->print_cell();
       //printf("Vizinhas:\n");
+      //M->print_cell_list((*it)->get_cell_lv());
       //M->print_cell_list((*it)->get_cell_lbw());
       //M->print_cell_list((*it)->get_cell_lbs());
       //M->print_cell_list((*it)->get_cell_lbe());
@@ -468,51 +514,57 @@ int main (int argc, char **args){
       lvs = (*it)->get_cell_lbs();
       lve = (*it)->get_cell_lbe();
       lvn = (*it)->get_cell_lbn();
-      lv.assign(lvw->begin(), lvw->end());
+      lvv.assign(lvw->begin(), lvw->end());
       //lv->insert(lv->end(), lvw->begin(), lvw->end());
-      lv.insert(lv.end(), lvs->begin(), lvs->end());
-      lv.insert(lv.end(), lve->begin(), lve->end());
-      lv.insert(lv.end(), lvn->begin(), lvn->end());
+      lvv.insert(lvv.end(), lvs->begin(), lvs->end());
+      lvv.insert(lvv.end(), lve->begin(), lve->end());
+      lvv.insert(lvv.end(), lvn->begin(), lvn->end());
+      lvv.insert(lvv.end(),(*it));
      
-      //M->print_cell_list(lv);
+      //M->print_cell_list(&lvv);
       Dp = -(De + Dw + Ds + Dn);
-      printf("Tamanhos %ld %ld %ld %ld\n", lvw->size(), lvs->size(), lve->size(), lvn->size());
-      if(lvw->size() > 1){
-	printf("MMQ\n");
-	m = lv.size();
+      //printf("Tamanhos %ld %ld %ld %ld\n", lvw->size(), lvs->size(), lve->size(), lvn->size());
+      if((*it)->get_cell_nvw() > 1){
+	printf("Vizinhas finas: W\n");
+	m = ((*it)->get_cell_lv())->size();
 	mls = (double *)malloc(m * sizeof(double));
 	id = (int *)malloc(m * sizeof(int));
-	peso(xw, yd, lv, M, id, mls);
+	peso(xw, yd, (*it)->get_cell_lv(), M, id, mls);
+	for(int a = 0; a < m; a++)
+	  printf("%d %f\n", id[a], mls[a]);
 	//Vizinhas para o MMQ
-	int k = 0;
-	for(list <cell *>::iterator wt = lv.begin(); wt != lv.end(); wt++){
-	  int idx = busca(id[k], lw);
-	  if(idx < 0){
+	//int k = 0;
+	//for(list <cell *>::iterator wt = lv.begin(); wt != lv.end(); wt++){
+	//  weight idx = busca(id[k], lw);
+	//  printf("%d %d %f\n", (*wt)->get_cell_index(), idx.get_weight_index(), idx.get_weight_w());
+	  //if(idx < 0){
 	    //Atualiza pesos
-	    ww.set_weight_index(id[k]);
-	    ww.set_weight_w(mls[k]); 
-	    lw.insert(lw.end(), ww);
-	    k++;
-	  }
-	  else{
+	    //ww.set_weight_index(id[k]);
+	    //   ww.set_weight_w(mls[k]); 
+	    //lw.insert(lw.end(), ww);
+	    //k++;
+	  //}
+	  //else{
 	    
-	  }
-	}
+	  //}
+	//}
       }
-      else if(lvw->size() < 1){
+      else if((*it)->get_cell_nvw() < 1){
+	//printf("Vizinha fronteira: W\n");
 	Dp -= Dw;
       }
       else{
 	list <cell *>::iterator wt = lvw->begin();
 	nl = (*wt)->get_cell_level();
 	if(nivel == nl){
+	  //printf("Vizinha mesmo nível: W\n");
 	  ww.set_weight_index((*wt)->get_cell_index());
 	  ww.set_weight_w(Dw);
 	  lw.insert(lw.end(), ww);	  
 	}
 	else{
-	  (*it)->print_cell();
-	  printf("Nivel mais grosso - MMQ\n");
+	  //(*it)->print_cell();
+	  printf("Vizinha mais grossa: W\n");
 	}
       }
       
@@ -559,7 +611,7 @@ int main (int argc, char **args){
       //MP = (*it)->get_cell_wpoisson();
       //M->print_weight_list(MP);
       lw.erase(lw.begin(),lw.end());
-      lv.erase(lv.begin(),lv.end());
+      lvv.erase(lvv.begin(),lvv.end());
 
     }
     
@@ -585,10 +637,10 @@ int main (int argc, char **args){
       iglobal = (*it)->get_cell_index();
      
       MP = (*it)->get_cell_wpoisson();
-      printf("Celula:\n");
-      (*it)->print_cell();
-      printf("pesos:\n");
-      M->print_weight_list(MP);
+      //printf("Celula:\n");
+      //(*it)->print_cell();
+      //printf("pesos:\n");
+      //M->print_weight_list(MP);
       j = 0;
       //printf("%d %d\n",iglobal, j);
       for(list <weight>::iterator wt = MP.begin(); wt != MP.end(); wt++){
