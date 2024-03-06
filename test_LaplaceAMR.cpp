@@ -45,7 +45,7 @@ double ** multiplicaAB(double ** A, double **B, int m, int n){
   for(int i = 0; i < m; i++){
     for(int j = 0; j < n; j++){
       soma = 0.0;
-      for(int k = 0; k < m; k++){
+      for(int k = 0; k < n; k++){
 	soma += A[i][k]*B[k][j];
       }
       U[i][j] = soma;
@@ -117,6 +117,53 @@ double weight_mls(double x, double y, double xp, double yp){
   return w;
 }
 
+double prod_esc(double * x, double * y, int n){
+  double pi = 0.0;
+  for(int i = 0; i < n; i++){
+    pi += x[i]*y[i];
+  }
+  return pi;
+}
+/*
+double ** matriz_Q(double v, int m, int k){
+  double ** Q;
+  double pi = prod_esc(v, v, m-k);
+  Q = (double **)malloc((m-k)*sizeof(double *));
+  for(int i = 0; i < m-k; i++)
+    Q[i] = (double *)malloc((m-k)*sizeof(double));
+  for(int i = 0; i < m-k; i++){
+    for(int j = 0; j < m-k; j++){
+      Q[i][j] = -2.0*v[i]*v[j]/pi;
+      if(i == j)
+	Q[i][j] += 1.0;
+    }
+  }
+  return Q;
+}
+*/
+double house(double * x, double * v, int n){
+  double sigma, beta, mu;
+ 
+  v[0] = 0.0;
+  for(int i = 1; i < n; i++)
+    v[i] = x[i];
+  sigma = prod_esc(v, v, n);
+  v[0] = 1.0;
+  if (sigma < 1.0e-10)
+    beta = 0.0;
+  else{
+    mu = sqrt(x[0]*x[0] + sigma);
+    if (x[0] < 1.0e-10)
+      v[0] = x[0] - mu;
+    else
+      v[0] = -sigma/(x[0] + mu);
+    beta = 2.0*v[0]*v[0]/(sigma + v[0]*v[0]);
+    for(int i = 0; i < n; i++)
+      v[i] = v[i]/v[0];
+  }
+  return beta;
+}
+
 double * peso_mls(double ** Q, double * W, double * y, int m, int n){
   double * mls;
   mls = (double *)malloc(m * sizeof(double));
@@ -142,6 +189,40 @@ double * subst_direta(double ** R, double * b, int n){
     x[i] = (b[i] - soma)/R[i][i];
   }
   return x;
+}
+
+void qr_house(double ** A, int m, int n){
+  int tam, i, j, k, l;
+  double beta, pi, soma;
+  double * x, * v;
+  for(j = 0; j < n; j++){
+    tam = m - j;
+    v = (double *)malloc(tam*sizeof(double));
+    x = (double *)malloc(tam*sizeof(double));
+    for(i = j; i < m; i++)
+      x[i] = A[i][j];
+    beta = house(x, v, tam);
+    pi = prod_esc(v, v, tam);
+    for(i = j; i < m; i++){
+      for(k = j; k < n; k++){
+	soma = 0.0;
+	for(l = j; l < m; l++)
+	  soma -= beta*(v[k-j]*v[l-j])*A[l][k];
+	soma += A[k][k];
+	A[i][k] = soma;
+      }
+    }
+    if(j < m){
+      for(i = j+1; i < m; i++)
+	A[i][j] = v[i-j];
+    }
+    //printf("%f\n", beta);
+    for(i = 0; i < tam; i++)
+      printf("%f\t", v[i+j]);
+    printf("\n");
+    free(x);
+    free(v);
+  }
 }
 
 void qr(double ** A, int m, int n, double **Q, double **R){
@@ -236,19 +317,32 @@ void peso(double xp, double yp, list <cell *> *lv, mesh * M, int * index, double
     A[k][2] = w[k]*yv;
     k++;
   }
+  printf("A:\n");
   print_matrix(A, m, n);
-  printf("\n");
+ 
   qr(A, m, n, Q, R);
-  B = multiplicaAB(Q, R, m, n);
-  printf("\n");
-  print_matrix(B, m, n);
+  //B = multiplicaAB(Q, R, m, n);
+  //printf("Q:\n");
+  //print_matrix(Q, m, m);
+  //printf("R:\n");
+  //print_matrix(R, m, n);
+  //printf("QR:\n");
+  //print_matrix(B, m, n);
+
+  qr_house(A, m, n);
+
+  printf("A = QR:\n");
+  print_matrix(A, m, n);
   for(k = 0; k < m; k++)
     for(int l = 0; l < n; l++)
       QQ[k][l] = Q[k][l];
   for(k = 0; k < n; k++)
     for(int l = 0; l < n; l++)
       RR[l][k] = R[k][l];
-
+  printf("QQ:\n");
+  print_matrix(QQ, m, n);
+  printf("RR:\n");
+  print_matrix(RR, n, n);
   for(int i = 0; i < m; i++){
     free(Q[i]);
     free(R[i]);
@@ -262,12 +356,12 @@ void peso(double xp, double yp, list <cell *> *lv, mesh * M, int * index, double
   phi[0] = 1.0;
   phi[1] = xp;
   phi[2] = yp;
-  printf("%f %f %f\n", phi[0], phi[1], phi[2]);
+  //printf("%f %f %f\n", phi[0], phi[1], phi[2]);
   ya = subst_direta(RR, phi, n);
-  printf("%f %f %f\n", ya[0], ya[1], ya[2]);
+  printf("Y: %f %f %f\n", ya[0], ya[1], ya[2]);
   mls = peso_mls(QQ, w, ya, m, n);
   for(int i = 0; i < m; i++)
-    printf("%f\t", mls[i]);
+    printf("Pesos: %f\t", mls[i]);
   printf("\n");
   
   for(int i = 0; i < m; i++)
@@ -525,7 +619,7 @@ int main (int argc, char **args){
       Dp = -(De + Dw + Ds + Dn);
       //printf("Tamanhos %ld %ld %ld %ld\n", lvw->size(), lvs->size(), lve->size(), lvn->size());
       if((*it)->get_cell_nvw() > 1){
-	printf("Vizinhas finas: W\n");
+	//printf("Vizinhas finas: W\n");
 	m = ((*it)->get_cell_lv())->size();
 	mls = (double *)malloc(m * sizeof(double));
 	id = (int *)malloc(m * sizeof(int));
@@ -564,7 +658,7 @@ int main (int argc, char **args){
 	}
 	else{
 	  //(*it)->print_cell();
-	  printf("Vizinha mais grossa: W\n");
+	  //printf("Vizinha mais grossa: W\n");
 	}
       }
       
