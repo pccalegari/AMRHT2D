@@ -178,36 +178,35 @@ double * peso_mls(double ** Q, double * W, double * y, int m, int n){
   return mls;
 }
 
-double * subst_direta(double ** R, double * b, int n){
-  double * x;
-  x = (double *) malloc(n * sizeof(double));
+
+void solve_RTyPhi(double ** A, double * b, double * y, int n){
   double soma;
   for(int i = 0; i < n; i++){
     soma = 0.0;
     for(int j = 0; j < i; j++)
-      soma += R[i][j]*x[j];
-    x[i] = (b[i] - soma)/R[i][i];
+      soma += A[j][i]*y[j];
+    y[i] = (b[i] - soma)/A[i][i];
   }
-  return x;
 }
 
 void qr_house(double ** A, int m, int n){
   int tam, i, j, k, l;
-  double beta, pi, soma;
-  double * x, * v;
+  double pi, soma;
+  double * x, * v, * beta;
+  beta = (double *)malloc(n*sizeof(double));
   for(j = 0; j < n; j++){
     tam = m - j;
     v = (double *)malloc(tam*sizeof(double));
     x = (double *)malloc(tam*sizeof(double));
     for(i = j; i < m; i++)
       x[i] = A[i][j];
-    beta = house(x, v, tam);
+    beta[j] = house(x, v, tam);
     pi = prod_esc(v, v, tam);
     for(i = j; i < m; i++){
       for(k = j; k < n; k++){
 	soma = 0.0;
 	for(l = j; l < m; l++)
-	  soma -= beta*(v[k-j]*v[l-j])*A[l][k];
+	  soma -= beta[j]*(v[k-j]*v[l-j])*A[l][k];
 	soma += A[k][k];
 	A[i][k] = soma;
       }
@@ -218,11 +217,12 @@ void qr_house(double ** A, int m, int n){
     }
     //printf("%f\n", beta);
     for(i = 0; i < tam; i++)
-      printf("%f\t", v[i+j]);
+      printf("%f\t", v[i]);
     printf("\n");
     free(x);
     free(v);
   }
+  free(beta);
 }
 
 void qr(double ** A, int m, int n, double **Q, double **R){
@@ -267,6 +267,7 @@ void peso(double xp, double yp, list <cell *> *lv, mesh * M, int * index, double
   //n tamanho da base: n = 3 temos {1, x, y}; n=6 temos {1, x, y, x*x, x*y, y*y}
   double dx, dy, xv, yv, xe, ye, xb, yb;
   dominio * D;
+  Mat A1;
   k = 0;
   n = 3;
   m = lv->size();
@@ -276,18 +277,18 @@ void peso(double xp, double yp, list <cell *> *lv, mesh * M, int * index, double
   A = (double **) malloc (m * sizeof(double *));
   for(int i = 0; i < m; i++)
     A[i] = (double *) malloc(n * sizeof(double));
-  Q = (double **) malloc (m * sizeof(double *));
-  for(int i = 0; i < m; i++)
-    Q[i] = (double *) malloc(m * sizeof(double));
-  R = (double **) malloc (m * sizeof(double *));
-  for(int i = 0; i < m; i++)
-    R[i] = (double *) malloc(n * sizeof(double));
-  QQ = (double **) malloc (m * sizeof(double *));
-  for(int i = 0; i < m; i++)
-    QQ[i] = (double *) malloc(n * sizeof(double));
-  RR = (double **) malloc (n * sizeof(double *));
-  for(int i = 0; i < n; i++)
-    RR[i] = (double *) malloc(n * sizeof(double));
+  //Q = (double **) malloc (m * sizeof(double *));
+  //for(int i = 0; i < m; i++)
+  //  Q[i] = (double *) malloc(m * sizeof(double));
+  //R = (double **) malloc (m * sizeof(double *));
+  //for(int i = 0; i < m; i++)
+  //  R[i] = (double *) malloc(n * sizeof(double));
+  //QQ = (double **) malloc (m * sizeof(double *));
+  //for(int i = 0; i < m; i++)
+  //  QQ[i] = (double *) malloc(n * sizeof(double));
+  //RR = (double **) malloc (n * sizeof(double *));
+  //for(int i = 0; i < n; i++)
+  //  RR[i] = (double *) malloc(n * sizeof(double));
   
   D = M->get_dominio();  
   xb = D->get_xbegin();
@@ -319,8 +320,23 @@ void peso(double xp, double yp, list <cell *> *lv, mesh * M, int * index, double
   }
   printf("A:\n");
   print_matrix(A, m, n);
- 
-  qr(A, m, n, Q, R);
+  
+  PetscCall(MatCreate(PETSC_COMM_SELF, &A1));
+  PetscCall(MatSetSizes(A1, m, n, M, N));
+  PetscCall(MatSetFromOptions(A1));
+  PetscCall(MatSetUp(A1));
+    
+  for (i = 0; i < m; i++) {
+    for (j = 0; j < n; j++){
+      PetscCall(MatSetValues(A1, m, &i, n, j,(PetscScalar) A[i][j], INSERT_VALUES));
+    }
+  }
+  
+  PetscCall(MatAssemblyBegin(A1, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(A1, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatSetOption(A1, MAT_NEW_NONZERO_LOCATION_ERR, PETSC_TRUE));
+  //MatQRFactor(A1, IS columnpermutation, const MatFactorInfo *info);
+  //qr(A, m, n, Q, R);
   //B = multiplicaAB(Q, R, m, n);
   //printf("Q:\n");
   //print_matrix(Q, m, m);
@@ -329,49 +345,54 @@ void peso(double xp, double yp, list <cell *> *lv, mesh * M, int * index, double
   //printf("QR:\n");
   //print_matrix(B, m, n);
 
-  qr_house(A, m, n);
+  //qr_house(A, m, n);
 
   printf("A = QR:\n");
   print_matrix(A, m, n);
-  for(k = 0; k < m; k++)
-    for(int l = 0; l < n; l++)
-      QQ[k][l] = Q[k][l];
-  for(k = 0; k < n; k++)
-    for(int l = 0; l < n; l++)
-      RR[l][k] = R[k][l];
-  printf("QQ:\n");
-  print_matrix(QQ, m, n);
-  printf("RR:\n");
-  print_matrix(RR, n, n);
-  for(int i = 0; i < m; i++){
-    free(Q[i]);
-    free(R[i]);
-    free(A[i]);
-  }
-  free(Q);
-  free(R);
-  free(A);
-
+  //for(k = 0; k < m; k++)
+  //  for(int l = 0; l < n; l++)
+  //    QQ[k][l] = Q[k][l];
+  //for(k = 0; k < n; k++)
+  //  for(int l = 0; l < n; l++)
+  //    RR[l][k] = R[k][l];
+  //printf("QQ:\n");
+  //print_matrix(QQ, m, n);
+  //printf("RR:\n");
+  //print_matrix(RR, n, n);
+ 
+  
   //Phi
   phi[0] = 1.0;
   phi[1] = xp;
   phi[2] = yp;
   //printf("%f %f %f\n", phi[0], phi[1], phi[2]);
-  ya = subst_direta(RR, phi, n);
-  printf("Y: %f %f %f\n", ya[0], ya[1], ya[2]);
-  mls = peso_mls(QQ, w, ya, m, n);
-  for(int i = 0; i < m; i++)
-    printf("Pesos: %f\t", mls[i]);
-  printf("\n");
-  
-  for(int i = 0; i < m; i++)
-    free(QQ[i]);
+  //ya = subst_direta(RR, phi, n);
+  //printf("Y: %f %f %f\n", ya[0], ya[1], ya[2]);
+  //mls = peso_mls(QQ, w, ya, m, n);
+  //for(int i = 0; i < m; i++)
+  //  printf("Pesos: %f\t", mls[i]);
+  //printf("\n");
+  solve_RTyPhi(A, phi, ya, n);
+  printf("Y:\n");
   for(int i = 0; i < n; i++)
-    free(RR[i]);
+    printf("%f\t", ya[i]);
+  printf("\n");
+   for(int i = 0; i < m; i++){
+    //free(Q[i]);
+    //free(R[i]);
+    free(A[i]);
+  }
+  //free(Q);
+  //free(R);
+  free(A);
+  //for(int i = 0; i < m; i++)
+  //  free(QQ[i]);
+  //for(int i = 0; i < n; i++)
+  //  free(RR[i]);
 
   
-  free(QQ);
-  free(RR);
+  //free(QQ);
+  //free(RR);
 
   free(w);
   free(phi);
