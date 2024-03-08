@@ -117,6 +117,23 @@ double weight_mls(double x, double y, double xp, double yp){
   return w;
 }
 
+void double w_delta(double x, double y){
+  //localiza cell que contem (x,y)
+  //lista de vizinhas da célula
+  int nviz = 0;
+  // dx e dy da célula que contem (xp,yp)
+  
+  for(int i = 0; i < nviz; i++){
+    //deltax = delta_linear((xv[i] - x)/dx);
+    //deltay = delta_linear((yv[i] - y)/dy);
+    //wi = deltax*deltay*dx*dy;
+    //total += wi;
+    
+  }
+  
+  
+}
+
 double prod_esc(double * x, double * y, int n){
   double pi = 0.0;
   for(int i = 0; i < n; i++){
