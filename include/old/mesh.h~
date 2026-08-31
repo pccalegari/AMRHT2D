@@ -1,0 +1,28 @@
+#include <iostream>
+#include <list>
+#include <vector>
+#include "silo.h"
+#include "hash_table.h"
+
+using namespace std;
+
+class mesh {
+ private:
+  hash_table * H;
+  vector<list <cell *> *> * l;
+  int number_of_levels;
+  vector <int> * max_dimension_by_level;
+ public:
+  mesh();
+  mesh(int n_levels, vector <int> * max_dimension_by_level);
+  void insert(cell *);
+  void remove(cell *);
+  cell * search (int, int, int);
+  void print_mesh();
+  hash_table * get_hash_table();
+  void split_and_insert(cell *);
+
+  /*Recebe uma célula c e o nível mais fino que c (ou mesmo nível de c) de seus vizinho(s) à esquerda.
+   Devolve uma lista com seu(s) vizinho(s). Essa lista NÃO PODE SER NULA.*/
+  list <cell *> * left_finest_or_same_level_neighbours(cell * c, int level_k);
+};

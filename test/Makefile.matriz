@@ -1,0 +1,10 @@
+INCLUDE_PETSC=/opt/petsc/include
+INCLUDE_PETSC_ARCH=/opt/petsc/arch-linux2-c-debug/include
+
+include ${PETSC_DIR}/lib/petsc/conf/variables
+include ${PETSC_DIR}/lib/petsc/conf/rules
+include ${PETSC_DIR}/lib/petsc/conf/test
+
+all:
+	gcc -Wall -c -I$(INCLUDE_PETSC) -I$(INCLUDE_PETSC_ARCH) hello_petsc.c -o hello_petsc.o -lm -L/opt/petsc/arch-linux2-c-debug/lib/libpetsc.so 
+	gcc hello_petsc.o -o hellop -lm -L/opt/petsc/arch-linux2-c-debug/lib/libpetsc.so 

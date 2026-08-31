@@ -1,0 +1,52 @@
+#Florianopolis set 2021
+#Nao esqueca de alterar o local de instalacao
+
+mkdir /home/priscila/Downloads/Programas
+mkdir /home/priscila/Documents/Programas
+mkdir /home/priscila/Documents/Programas/szip
+mkdir /home/priscila/Documents/Programas/zlib
+mkdir /home/priscila/Documents/Programas/silo
+mkdir /home/priscila/Documents/Programas/hdf5
+
+MAIN_DOWNLOAD_DIR=/home/priscila/Downloads/Programas
+MAIN_INSTALL_DIR=/home/priscila/Documents/Programas
+
+wget -P $MAIN_DOWNLOAD_DIR https://support.hdfgroup.org/ftp/lib-external/szip/2.1/src/szip-2.1.tar.gz
+
+wget -P $MAIN_DOWNLOAD_DIR https://zlib.net/zlib-1.2.11.tar.gz
+
+wget -P $MAIN_DOWNLOAD_DIR https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.8/hdf5-1.8.18/src/hdf5-1.8.18.tar
+
+wget -P $MAIN_DOWNLOAD_DIR  https://wci.llnl.gov/sites/wci/files/2021-01/silo-4.10.2.tgz
+
+cd $MAIN_DOWNLOAD_DIR
+
+tar -xvzf szip-2.1.tar.gz
+tar -xvzf zlib-1.2.8.tar.gz
+tar -xvf hdf5-1.8.18.tar
+tar -xvzf silo-4.10.2.tgz
+
+cd szip-2.1.1
+./configure --prefix=$MAIN_INSTALL_DIR/szip 
+make 
+make check
+make install
+
+cd ../zlib-1.2.11
+./configure --prefix=$MAIN_INSTALL_DIR/zlib 
+make 
+make check
+make install
+
+cd ../hdf5-1.8.18
+CC='cc -m64' ./configure --prefix=$MAIN_INSTALL_DIR/hdf5 --enable-fortran --enable-cxx --with-szlib=$MAIN_INSTALL_DIR/szip --with-zlib=$MAIN_INSTALL_DIR/zlib/include,$MAIN_INSTALL_DIR/zlib/lib
+make 
+make check
+make install
+
+cd ../silo-4.10.2
+CC=gcc FC=gfortran CXX=g++ ./configure --prefix=$MAIN_INSTALL_DIR/silo --enable-fortran --with-szlib=$MAIN_INSTALL_DIR/szip --with-zlib=$MAIN_INSTALL_DIR/zlib/include/,$MAIN_INSTALL_DIR/zlib/lib/ --with-hdf5=$MAIN_INSTALL_DIR/hdf5/include/,$MAIN_INSTALL_DIR/hdf5/lib/
+make 
+make install
+
+#rm -R MAIN_DOWNLOAD_DIR

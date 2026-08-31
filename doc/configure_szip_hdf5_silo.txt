@@ -1,0 +1,30 @@
+ZLIB: (version 1.2.11)
+wget https://zlib.net/zlib-1.2.11.tar.gz
+./configure --prefix=/opt/zlib 
+make 
+make install
+
+SZIP: (version 2.1.1)
+wget https://support.hdfgroup.org/ftp/lib-external/szip/2.1.1/src/szip-2.1.1.tar.gz
+./configure --prefix=/opt/szip/
+make
+make install
+
+HDF5: (version 1.8.20)
+wget https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.8/hdf5-1.8.20/src/hdf5-1.8.20.tar 
+./configure --prefix=/opt/hdf5 --enable-fortran --enable-cxx --with-szlib=/opt/szip --with-zlib=/opt/zlib/include,/opt/zlib/lib 
+make
+make install
+
+SILO: (version 4.10.2)
+wget https://wci.llnl.gov/sites/wci/files/2021-01/silo-4.10.2.tgz
+./configure --prefix=/opt/silo --enable-fortran --enable-optimization --with-zlib=/opt/zlib/include,/opt/zlib/lib --with-szlib=/opt/szip --with-hdf5=/opt/hdf5/include,/opt/hdf5/lib
+make 
+make install
+
+Update .bashrc file:
+Add: export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/opt/szip/lib:/opt/hdf5/lib:/opt/silo/lib"
+
+
+
+
